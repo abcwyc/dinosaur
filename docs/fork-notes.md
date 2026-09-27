@@ -17,6 +17,27 @@ upstream merge can be checked point by point.
 | `src/app/sidebar_compact.rs` | Client: single-line row layout, "Show" menu, pull request refresh, `render_compact_session_item` |
 | `assets/icons/git-pull-request.svg` | Icon |
 
+## Antigravity CLI provider
+
+A new provider, not a sidebar hook, so it necessarily touches every exhaustive
+`match ProviderKind`. New files: `crates/waku-core/src/driver/antigravity.rs`,
+`crates/waku-core/src/antigravity_session.rs`,
+`assets/icons/provider-antigravity.svg`. One-arm additions (grep
+`Antigravity` after a merge): `waku-protocol/src/model.rs` (variant, `ALL`,
+names, command `agy`, cursor `Antigravity { conversation_id }`, model
+discovery, `ALL` length test), `waku-protocol/src/model_catalog.rs`,
+`driver/mod.rs`, `model_catalog.rs`, `daemon.rs` (list/load sessions; branch
+and rewind unsupported), `git_commit.rs`, `slash_command_catalog.rs`,
+`composer_complete.rs`, `native_index.rs`, `src/app/runtime.rs`,
+`src/app/sessions.rs` (runtime released on Stop), `src/ui/mod.rs`,
+`src/assets.rs`, `native_projects.rs`, web `waku-icon.tsx` and
+`runtime-context.tsx`, locales. If upstream adds a provider, the compiler
+lists the same sites; if upstream adds Antigravity itself, drop this one.
+
+The stream-json protocol is undocumented (see `docs/providers.md`), so an agy
+upgrade can break it silently; `driver::antigravity` tests pin the event
+shapes.
+
 ## Hooks in upstream files
 
 ### `src/app/sidebar.rs` (most likely to conflict)

@@ -1407,6 +1407,10 @@ errors.provider_transport_read:
   en: "%{provider} transport read failed: %{error}"
 errors.provider_invalid_json:
   en: "%{provider} sent invalid JSON: %{error}"
+errors.antigravity_full_access_only:
+  en: "Antigravity CLI runs only in Full access: its streaming mode cannot ask for approvals."
+errors.provider_turn_failed:
+  en: "%{provider} could not finish the turn"
 errors.provider_exited:
   en: "%{provider} exited with %{status}"
 errors.provider_rpc_exited:

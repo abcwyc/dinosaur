@@ -3,6 +3,7 @@
 mod acp;
 mod activity;
 mod amp;
+mod antigravity;
 mod claude;
 mod codex;
 mod computer_use;
@@ -245,6 +246,11 @@ pub(crate) fn start_local(
         // Amp reads newline-delimited user messages on stdin and stays alive
         // until stdin closes, so it too serves the whole conversation.
         ProviderKind::Amp => Arc::new(amp::AmpDriver::start(options, events)?),
+        // Antigravity reads NDJSON user messages on stdin in its undocumented
+        // stream-json mode, one long-lived process per conversation.
+        ProviderKind::Antigravity => {
+            Arc::new(antigravity::AntigravityDriver::start(options, events)?)
+        }
     };
     Ok(DriverHandle { inner })
 }

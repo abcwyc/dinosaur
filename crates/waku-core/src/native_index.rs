@@ -30,7 +30,8 @@ const CACHE_VERSION: u32 = 1;
 const CODEX_HEAD_BYTES: u64 = 2 * 1024 * 1024;
 
 /// Providers the index can list from files alone.
-pub const INDEXED_PROVIDERS: [ProviderKind; 6] = [
+pub const INDEXED_PROVIDERS: [ProviderKind; 7] = [
+    ProviderKind::Antigravity,
     ProviderKind::Claude,
     ProviderKind::Codex,
     ProviderKind::Pi,
@@ -126,6 +127,14 @@ impl NativeIndex {
                     .into_iter()
                     .map(native)
                     .collect(),
+                // One read of agy's summary database; no per-file cache needed.
+                ProviderKind::Antigravity => {
+                    crate::antigravity_session::list_provider_sessions(limit)
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(native)
+                        .collect()
+                }
                 _ => Vec::new(),
             };
             let mut seen = HashSet::new();

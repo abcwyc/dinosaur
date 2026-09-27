@@ -326,6 +326,7 @@ function fileTypeIconName(path: string): FileTypeIconName {
 
 const PROVIDER_ICONS: Record<ProviderKind, string> = {
   amp: 'i-waku-provider-amp',
+  antigravity: 'i-waku-provider-antigravity',
   claude: 'i-waku-provider-claude',
   codex: 'i-waku-provider-openai',
   cursor: 'i-waku-provider-cursor',
@@ -346,6 +347,7 @@ export const PROVIDERS: Array<{
   command: string
 }> = [
   { id: 'amp', name: 'Amp', shortName: 'Amp', command: 'amp' },
+  { id: 'antigravity', name: 'Antigravity CLI', shortName: 'Antigravity', command: 'agy' },
   { id: 'claude', name: 'Claude Code', shortName: 'Claude', command: 'claude' },
   { id: 'codex', name: 'Codex CLI', shortName: 'Codex', command: 'codex' },
   { id: 'cursor', name: 'Cursor CLI', shortName: 'Cursor', command: 'cursor-agent' },

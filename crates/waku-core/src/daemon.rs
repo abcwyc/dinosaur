@@ -541,6 +541,9 @@ impl Backend for WakuBackend {
                     ProviderKind::OhMyPi | ProviderKind::Pi => {
                         crate::pi_session::list_provider_sessions(provider, limit)?
                     }
+                    ProviderKind::Antigravity => {
+                        crate::antigravity_session::list_provider_sessions(limit)?
+                    }
                 };
                 sessions.sort_by(|a, b| {
                     b.updated_at
@@ -580,6 +583,10 @@ impl Backend for WakuBackend {
                 // numbering, but bound imported display text to recent turns.
                 const VISIBLE_TURN_LIMIT: usize = 100;
                 let history = match &cursor {
+                    ProviderResumeCursor::Antigravity { conversation_id } => {
+                        self.provider_binary(ProviderKind::Antigravity)?;
+                        crate::antigravity_session::provider_session_history(conversation_id)
+                    }
                     ProviderResumeCursor::Amp { thread_id, .. } => {
                         let binary = self.provider_binary(ProviderKind::Amp)?;
                         crate::amp_session::provider_session_history(
@@ -1314,7 +1321,7 @@ impl WakuBackend {
             }
             // Unreachable through the UI, which hides branching for providers
             // that answer `supports_conversation_fork` with false.
-            ProviderKind::Fx | ProviderKind::Kimi => {
+            ProviderKind::Antigravity | ProviderKind::Fx | ProviderKind::Kimi => {
                 bail!(
                     "{} cannot branch a conversation at a turn",
                     source.provider.display_name()
@@ -1541,7 +1548,7 @@ impl WakuBackend {
             )),
             // Unreachable through the UI, which hides rewinding for providers
             // that answer `supports_conversation_rollback` with false.
-            ProviderKind::Fx | ProviderKind::Kimi => {
+            ProviderKind::Antigravity | ProviderKind::Fx | ProviderKind::Kimi => {
                 bail!(
                     "{} cannot rewind a conversation to a turn",
                     source.provider.display_name()

@@ -16,7 +16,8 @@ use super::*;
 const PREFS_FILE: &str = "native-catalog.json";
 
 /// Providers listed from their own files by the daemon's native index.
-pub(super) const INDEXED_PROVIDERS: [ProviderKind; 6] = [
+pub(super) const INDEXED_PROVIDERS: [ProviderKind; 7] = [
+    ProviderKind::Antigravity,
     ProviderKind::Claude,
     ProviderKind::Codex,
     ProviderKind::Pi,
