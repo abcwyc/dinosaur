@@ -894,7 +894,7 @@ pub struct StateStore {
     /// cache. It is never read by the daemon.
     app_state_path: PathBuf,
     /// Desktop-owned preferences. Debug stays isolated in the checkout while
-    /// Release uses the explicit cross-client Waku configuration directory.
+    /// Release uses the explicit cross-client Dinosaur configuration directory.
     app_settings_path: PathBuf,
     /// Read-only migration sources for the former combined settings document.
     legacy_settings_paths: Vec<PathBuf>,
@@ -2556,7 +2556,7 @@ mod tests {
         }
         #[cfg(not(debug_assertions))]
         {
-            assert_eq!(directory, Some(std::ffi::OsStr::new("Waku")));
+            assert_eq!(directory, Some(std::ffi::OsStr::new("Dinosaur")));
             let configuration_directory = dirs::home_dir()
                 .unwrap_or_else(std::env::temp_dir)
                 .join(".waku");

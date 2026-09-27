@@ -14,16 +14,16 @@ import { parseArgs } from "node:util";
 import { defaultDownloadUrlPrefix, generateAppcast } from "./appcast";
 import { extractReleaseNotes } from "./changelog";
 
-const appName = "Waku";
-const executableName = "Waku";
+const appName = "Dinosaur";
+const executableName = "Dinosaur";
 const jsReplExecutableName = "waku_js_repl";
 const daemonExecutableName = "waku-daemon";
-const computerUseHelperName = "Waku Computer Use";
+const computerUseHelperName = "Dinosaur Computer Use";
 const packageName = "waku";
 const defaultNotaryProfile = "NOTARY";
 const projectRoot = resolve(import.meta.dir, "..");
 
-const help = `Build, notarize, and publish a production release of Waku.
+const help = `Build, notarize, and publish a production release of Dinosaur.
 
 Usage:
   bun run release [options]
@@ -37,7 +37,7 @@ Options:
   --local                       Build, notarize, and write the DMG + zip
                                 without publishing to R2
   --force                       Publish even if this version is already in R2
-  --output <path>               DMG output path (default: dist/Waku-<version>.dmg)
+  --output <path>               DMG output path (default: dist/Dinosaur-<version>.dmg)
   --signing-identity <name>     Developer ID Application identity selector
                                 (or WAKU_SIGNING_IDENTITY; required unless --adhoc)
   --notary-profile <name>       notarytool keychain profile
@@ -45,7 +45,7 @@ Options:
   --build-number <number>       CFBundleVersion override (or WAKU_BUILD_NUMBER;
                                 default derives a monotonic number from the
                                 Cargo version)
-  --volume-name <name>          Mounted DMG name (default: Waku)
+  --volume-name <name>          Mounted DMG name (default: Dinosaur)
   --skip-build                  Reuse target/release/waku, waku_js_repl, and
                                 waku-daemon
   --skip-notarize               Unnotarized signed DMG (implies --local)
@@ -630,7 +630,7 @@ try {
   await $`ditto ${zipPath} ${join(updatesDirectory, zipName)}`;
 
   // Release notes: this version's CHANGELOG.md section ships next to the
-  // archive as Waku-<version>.md; generate_appcast links it as the update's
+  // archive as Dinosaur-<version>.md; generate_appcast links it as the update's
   // release notes, which Sparkle renders in the prompt.
   const changelogFile = Bun.file(join(projectRoot, "CHANGELOG.md"));
   const notes = (await changelogFile.exists())

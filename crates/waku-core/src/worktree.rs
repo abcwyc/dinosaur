@@ -266,7 +266,7 @@ mod tests {
             &repository,
             &[
                 "-c",
-                "user.name=Waku Tests",
+                "user.name=Dinosaur Tests",
                 "-c",
                 "user.email=waku@example.com",
                 "commit",
@@ -293,7 +293,7 @@ mod tests {
             &repository,
             &[
                 "-c",
-                "user.name=Waku Tests",
+                "user.name=Dinosaur Tests",
                 "-c",
                 "user.email=waku@example.com",
                 "commit",

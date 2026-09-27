@@ -666,7 +666,7 @@ mod tests {
         let root = std::env::temp_dir().join(format!("waku-commit-test-{}", Uuid::new_v4()));
         fs::create_dir_all(&root).unwrap();
         run_git(&root, &["init", "-b", "main"]);
-        run_git(&root, &["config", "user.name", "Waku Tests"]);
+        run_git(&root, &["config", "user.name", "Dinosaur Tests"]);
         run_git(&root, &["config", "user.email", "waku@example.com"]);
         fs::write(root.join("README.md"), "one\n").unwrap();
         run_git(&root, &["add", "."]);

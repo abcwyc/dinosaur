@@ -564,7 +564,7 @@ impl Waku {
     /// as on screen and keeps its full width here: the slide narrows the
     /// container that clips it, so nothing inside reflows on the way out.
     /// What the panel actually occupies this frame is
-    /// [`Waku::sidebar_rendered_width`] / [`Waku::right_panel_rendered_width`].
+    /// [`Dinosaur::sidebar_rendered_width`] / [`Dinosaur::right_panel_rendered_width`].
     pub(super) fn effective_panel_widths(&self, window: &Window) -> (f32, f32) {
         fitted_panel_widths(
             f32::from(window.viewport_size().width),
@@ -1237,11 +1237,11 @@ impl Waku {
         if let Some(previous_kinds) = previous_kinds.as_deref() {
             self.splice_active_transcript_rows_after_visibility_change(previous_kinds);
         }
-        // A provider runtime owns its Waku JavaScript REPL and Computer Use
+        // A provider runtime owns its Dinosaur JavaScript REPL and Computer Use
         // descendants. Normally Stop closes that process tree and the next
         // prompt resumes the same provider thread with a fresh runtime. A
         // detached process or subagent is the exception: its provider must
-        // remain resident so Waku can keep observing and stopping it.
+        // remain resident so Dinosaur can keep observing and stopping it.
         if retain_runtime && keep_runtime {
             if let Some(runtime) = runtime.take() {
                 self.runtimes.insert(session_id, runtime);

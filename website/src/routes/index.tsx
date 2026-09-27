@@ -77,7 +77,7 @@ const FEATURES = [
   {
     icon: HardDrive,
     title: 'Local by architecture',
-    body: 'Projects, sessions, transcripts, and provider IDs live on your disk. No account, no telemetry, no Waku cloud between you and your agents.',
+    body: 'Projects, sessions, transcripts, and provider IDs live on your disk. No account, no telemetry, no Dinosaur cloud between you and your agents.',
   },
   {
     icon: RefreshCw,
@@ -89,15 +89,15 @@ const FEATURES = [
 const FAQ = [
   {
     q: 'Is this another Electron app?',
-    a: 'No. Waku is a single Rust binary rendered by GPUI, the UI framework Zed is built on. The window you see is drawn by the GPU, not by a browser engine.',
+    a: 'No. Dinosaur is a single Rust binary rendered by GPUI, the UI framework Zed is built on. The window you see is drawn by the GPU, not by a browser engine.',
   },
   {
     q: 'Do I need new API keys?',
-    a: 'No. Waku detects amp, claude, codex, cursor-agent, opencode, grok, pi, and kimi on your machine and drives them directly — your existing logins, plans, and rate limits apply unchanged.',
+    a: 'No. Dinosaur detects amp, claude, codex, cursor-agent, opencode, grok, pi, and kimi on your machine and drives them directly — your existing logins, plans, and rate limits apply unchanged.',
   },
   {
     q: 'Where does my data live?',
-    a: 'On your machine. Projects, sessions, transcripts, and provider session IDs are stored locally. There is no Waku account and no telemetry.',
+    a: 'On your machine. Projects, sessions, transcripts, and provider session IDs are stored locally. There is no Dinosaur account and no telemetry.',
   },
   {
     q: 'What is the future plan?',
@@ -199,7 +199,7 @@ function Home() {
                 className="size-8 rounded-[6px]"
               />
               <span className="text-[15px] font-semibold tracking-tight">
-                Waku
+                Dinosaur
               </span>
             </a>
             <div className="flex items-center gap-5">
@@ -243,7 +243,7 @@ function Home() {
                 One native app for all your coding agents.
               </h1>
               <p className="mt-5 max-w-[36rem] text-[17px] leading-relaxed text-pretty text-muted-foreground">
-                Waku drives the agent CLIs you already have — sessions,
+                Dinosaur drives the agent CLIs you already have — sessions,
                 transcripts, tool activity, and checkpoints in one fast
                 graphite window, entirely on your machine.
               </p>
@@ -302,7 +302,7 @@ function Home() {
                 />
                 <img
                   src="/app-screenshot-light.png"
-                  alt="Waku showing a coding-agent session"
+                  alt="Dinosaur showing a coding-agent session"
                   width={2266}
                   height={1752}
                   className="block h-auto w-full"
@@ -334,7 +334,7 @@ function Home() {
             <section id="download" className="border-t px-5 py-16 md:px-10 md:py-20">
               <SectionLabel>Download</SectionLabel>
               <h2 className="mt-3 text-2xl font-semibold tracking-tight">
-                Get Waku
+                Get Dinosaur
               </h2>
               <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
                 <DownloadMenu
@@ -378,7 +378,7 @@ function Home() {
               alt=""
               className="size-4 rounded-[4px] opacity-80 grayscale"
             />
-            <span>© 2026 Waku</span>
+            <span>© 2026 Dinosaur</span>
           </footer>
         </div>
       </div>

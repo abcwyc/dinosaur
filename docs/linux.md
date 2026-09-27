@@ -1,4 +1,4 @@
-# Waku on Linux
+# Dinosaur on Linux
 
 ## Install
 
@@ -8,16 +8,16 @@ curl -fsSL https://waku.sh/install.sh | sh
 
 The script needs no root. It unpacks the release tarball into
 `~/.local/waku.app` and installs the desktop entry into
-`~/.local/share/applications`, so **Waku appears in your applications menu** —
+`~/.local/share/applications`, so **Dinosaur appears in your applications menu** —
 you can also launch it from a terminal via `waku` command. Run the script again to
 upgrade manually; the installed app also keeps itself current.
 
-Waku expects:
+Dinosaur expects:
 
 - **glibc 2.35 or newer** — Ubuntu 22.04, Debian 12, Fedora 36, and anything
   more recent. Releases are built on Ubuntu 22.04, so older distributions must
   build from source.
-- **A working Vulkan or OpenGL driver.** Waku renders through wgpu, which tries
+- **A working Vulkan or OpenGL driver.** Dinosaur renders through wgpu, which tries
   Vulkan first and falls back to GL. Software rasterizers (lavapipe, llvmpipe)
   are accepted, so it can run in a VM, but see the note below.
 - **x86_64 or aarch64.** Other architectures build from source.
@@ -44,14 +44,14 @@ The archive uses an install-prefix layout (`bin/`, `share/`) beneath one
 versioned directory, so `--strip-components=1` into a prefix such as
 `/usr/local` works too.
 
-**Keep `bin/` and `share/waku/` intact.** Waku launches its daemon, updater,
+**Keep `bin/` and `share/waku/` intact.** Dinosaur launches its daemon, updater,
 and Computer Use helpers from `bin/`; the SDK library and supporting resources
-ship in the same installation. A symlink is fine — Waku resolves it back to
+ship in the same installation. A symlink is fine — Dinosaur resolves it back to
 the real path.
 
 Installing the desktop entry is the part that matters — it is how the app is
 launched normally, and it is what associates the running window with its icon
-and name (Waku reports the Wayland `app_id` / X11 `WM_CLASS` `sh.waku`, which
+and name (Dinosaur reports the Wayland `app_id` / X11 `WM_CLASS` `sh.waku`, which
 matches the entry's filename). Install the packaged file and point it at the
 install (the packaged copy uses bare `Exec=waku` and `Icon=sh.waku` names so it
 can be relocated):
@@ -67,9 +67,9 @@ sed -i "s|^Icon=sh.waku$|Icon=$HOME/.local/waku.app/share/icons/hicolor/256x256/
 
 ## Updating
 
-Tarball installs under the user's home directory update themselves. Waku
+Tarball installs under the user's home directory update themselves. Dinosaur
 checks once per launch by default; an available release appears in the sidebar
-footer. Clicking it validates the staged installation, quits through Waku's
+footer. Clicking it validates the staged installation, quits through Dinosaur's
 normal draft/state saves, swaps the complete prefix, and relaunches. If the new
 build exits before opening its window, the helper restores and relaunches the
 previous version.
@@ -127,7 +127,7 @@ rasterizer. That works in principle — wgpu accepts a CPU adapter — but both
 lavapipe (Vulkan) and llvmpipe (GL) JIT-compile shaders through LLVM, and that
 path is fragile: on Fedora 44 aarch64 (mesa 26.0.3 + LLVM 22.1) it segfaults
 inside `gallivm_jit_function` while compiling a fragment shader. The crash is
-in the driver, not in Waku, and no application-side setting avoids it.
+in the driver, not in Dinosaur, and no application-side setting avoids it.
 
 If the app dies on its first frame in a VM, check `coredumpctl info` for a
 backtrace through `libvulkan_lvp.so` or `libgallium`. The reliable fix is to

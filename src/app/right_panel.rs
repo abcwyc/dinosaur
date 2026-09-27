@@ -42,7 +42,7 @@ fn line_fragment(fragment: &str) -> bool {
 
 /// Removes the `:line`, `:line:column`, or `#LlineCcolumn` suffixes Codex uses
 /// in clickable local-file references. The location is not yet consumed by
-/// Waku's compact editor, but it must not become part of the filesystem path.
+/// Dinosaur's compact editor, but it must not become part of the filesystem path.
 fn strip_file_location(target: &str) -> &str {
     if let Some((path, fragment)) = target.rsplit_once('#')
         && line_fragment(fragment)
@@ -180,7 +180,7 @@ pub(super) fn file_icon_for_path(path: &str) -> &'static str {
 fn review_diff_gap_icon_path(direction: crate::review_diff::ExpansionDirection) -> &'static str {
     match direction {
         // Pierre's direction attributes and rendered chevrons are inverted by
-        // CSS. Waku names the data operation directly, so encode the resulting
+        // CSS. Dinosaur names the data operation directly, so encode the resulting
         // visual here: reveal-from-start points down; reveal-from-end points up.
         crate::review_diff::ExpansionDirection::Start => "icons/chevron-down.svg",
         crate::review_diff::ExpansionDirection::End => "icons/chevron-up.svg",
@@ -834,7 +834,7 @@ fn file_highlighter_language(relative_path: &str) -> &'static str {
 /// Reads a file for the editor, returning its text and whether it can be saved.
 ///
 /// One unbounded `read_to_string`, so callers keep it off the UI thread; the
-/// only caller is [`Waku::read_right_panel_file_into_editor`].
+/// only caller is [`Dinosaur::read_right_panel_file_into_editor`].
 fn read_right_panel_file(
     workspace: &waku_client::WorkspaceClient,
     project_path: &Path,
@@ -1435,7 +1435,7 @@ mod tests {
         std::fs::create_dir_all(root.join("src/nested")).unwrap();
         std::fs::create_dir_all(root.join(".git")).unwrap();
         std::fs::write(root.join("src/main.rs"), "fn main() {}\n").unwrap();
-        std::fs::write(root.join("README.md"), "# Waku\n").unwrap();
+        std::fs::write(root.join("README.md"), "# Dinosaur\n").unwrap();
 
         let collapsed = visible_working_tree_entries(&root, &HashSet::new());
         assert_eq!(

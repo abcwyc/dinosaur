@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 //
 // Sign the two Linux tarballs and merge them into architecture-specific
-// Sparkle-format feeds. Waku's native Linux updater reads this same compact
+// Sparkle-format feeds. Dinosaur's native Linux updater reads this same compact
 // contract as the Windows updater; Sparkle itself is not involved.
 //
 // Usage:
@@ -50,7 +50,7 @@ export function renderAppcast(
   return `<?xml version="1.0" encoding="utf-8"?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
   <channel>
-    <title>Waku (Linux ${arch})</title>
+    <title>Dinosaur (Linux ${arch})</title>
 ${entries}
   </channel>
 </rss>

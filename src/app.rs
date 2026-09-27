@@ -563,7 +563,7 @@ struct DriverStartRequest {
 }
 
 /// A provider process that has started off-thread but is not installed into
-/// Waku's runtime map yet. Its event receiver safely buffers early events.
+/// Dinosaur's runtime map yet. Its event receiver safely buffers early events.
 struct PreparedDriver {
     handle: DriverHandle,
     events: Receiver<DriverEvent>,
@@ -2452,7 +2452,7 @@ impl Waku {
             .detach();
 
             // Clipboard images and Finder file copies are attachment payloads,
-            // not text paths. The input owns representation priority; Waku
+            // not text paths. The input owns representation priority; Dinosaur
             // owns durable staging and composer/session state.
             cx.subscribe(
                 &composer,

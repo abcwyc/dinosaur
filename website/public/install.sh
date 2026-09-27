@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-# Installs Waku for Linux into ~/.local — no root, no package manager.
+# Installs Dinosaur for Linux into ~/.local — no root, no package manager.
 # Downloads the release tarball from https://releases.waku.sh, unpacks it as
 # ~/.local/waku.app, links the binary onto PATH, and registers the desktop
 # entry. docs/linux.md documents the equivalent manual steps.
@@ -15,14 +15,14 @@ set -eu
 
 usage() {
     cat <<'USAGE'
-Install Waku for Linux into ~/.local.
+Install Dinosaur for Linux into ~/.local.
 
 Usage:
   curl -fsSL https://waku.sh/install.sh | sh
   curl -fsSL https://waku.sh/install.sh | sh -s -- --uninstall
 
 Options:
-  --uninstall   Remove Waku, leaving ~/.waku (projects and settings) alone
+  --uninstall   Remove Dinosaur, leaving ~/.waku (projects and settings) alone
   --help        Show this help
 USAGE
 }
@@ -30,7 +30,9 @@ USAGE
 main() {
     app_dir="$HOME/.local/waku.app"
     bin_link="$HOME/.local/bin/waku"
-    desktop_file="$HOME/.local/share/applications/sh.waku.desktop"
+    desktop_file="$HOME/.local/share/applications/sh.dinosaur.desktop"
+    # The launcher entry's name before the Waku -> Dinosaur rename.
+    legacy_desktop_file="$HOME/.local/share/applications/sh.waku.desktop"
     releases="${WAKU_RELEASES_URL:-https://releases.waku.sh}"
 
     case "${1:-}" in
@@ -46,7 +48,7 @@ main() {
 
     platform="$(uname -s)"
     if [ "$platform" = "Darwin" ]; then
-        echo "Waku for macOS ships as a signed .dmg that updates itself." >&2
+        echo "Dinosaur for macOS ships as a signed .dmg that updates itself." >&2
         echo "Download it from https://waku.sh" >&2
         exit 1
     fi
@@ -93,10 +95,10 @@ main() {
             version="$(printf '%s' "$version" | tr -d '[:space:]')"
         fi
         if [ -z "$version" ]; then
-            echo "No Waku version published for Linux yet." >&2
+            echo "No Dinosaur version published for Linux yet." >&2
             exit 1
         fi
-        echo "Downloading Waku $version for $machine"
+        echo "Downloading Dinosaur $version for $machine"
         if ! fetch "$releases/waku-$version-$target.tar.gz" >"$archive"; then
             echo "Download failed: $releases/waku-$version-$target.tar.gz" >&2
             exit 1
@@ -116,7 +118,7 @@ main() {
     mkdir -p "$staging" "$(dirname "$bin_link")" "$(dirname "$desktop_file")"
     tar -xzf "$archive" --strip-components=1 -C "$staging"
 
-    # Waku resolves its daemon and self-update helper next to its own
+    # Dinosaur resolves its daemon and self-update helper next to its own
     # executable, so all three must stay together in bin/. Linking only the
     # main binary onto PATH is safe — current_exe() resolves the symlink back
     # into waku.app.
@@ -137,22 +139,23 @@ main() {
     mv "$staging" "$app_dir"
     ln -sf "$app_dir/bin/waku" "$bin_link"
 
-    entry="$app_dir/share/applications/sh.waku.desktop"
+    remove_legacy_desktop_file
+    entry="$app_dir/share/applications/sh.dinosaur.desktop"
     if [ -f "$entry" ]; then
         # The packaged entry is relocatable (bare Exec/Icon names). Pin both to
         # this install so the launcher works without PATH or icon-theme setup.
         sed -e "s|^Exec=waku$|Exec=$app_dir/bin/waku|" \
-            -e "s|^Icon=sh.waku$|Icon=$app_dir/share/icons/hicolor/256x256/apps/sh.waku.png|" \
+            -e "s|^Icon=sh.dinosaur$|Icon=$app_dir/share/icons/hicolor/256x256/apps/sh.dinosaur.png|" \
             "$entry" >"$desktop_file"
         if command -v update-desktop-database >/dev/null 2>&1; then
             update-desktop-database "$(dirname "$desktop_file")" 2>/dev/null || true
         fi
     fi
 
-    # Waku is a desktop app and takes no arguments, so the launcher entry is
+    # Dinosaur is a desktop app and takes no arguments, so the launcher entry is
     # the way in. The PATH link is a convenience for starting it from a
     # terminal to watch its output.
-    echo "Waku is installed."
+    echo "Dinosaur is installed."
     if [ -f "$desktop_file" ]; then
         echo "Open it from your applications menu."
     fi
@@ -163,9 +166,15 @@ main() {
     fi
 }
 
+remove_legacy_desktop_file() {
+    if [ -f "$legacy_desktop_file" ] && grep -qF "$app_dir/bin/waku" "$legacy_desktop_file"; then
+        rm -f "$legacy_desktop_file"
+    fi
+}
+
 uninstall() {
     if [ ! -d "$app_dir" ] && [ ! -L "$bin_link" ]; then
-        echo "Waku is not installed at $app_dir." >&2
+        echo "Dinosaur is not installed at $app_dir." >&2
         exit 1
     fi
     # Only reclaim the symlink and desktop entry this script created; a
@@ -176,8 +185,9 @@ uninstall() {
     if [ -f "$desktop_file" ] && grep -qF "$app_dir/bin/waku" "$desktop_file"; then
         rm -f "$desktop_file"
     fi
+    remove_legacy_desktop_file
     rm -rf "$app_dir"
-    echo "Waku is uninstalled. Projects and settings remain in ~/.waku."
+    echo "Dinosaur is uninstalled. Projects and settings remain in ~/.waku."
 }
 
 main "$@"

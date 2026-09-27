@@ -2735,7 +2735,7 @@ fn activity_scroll_follow_state(
     }
 }
 
-/// Pure window arithmetic behind [`Waku::live_reasoning_window_start`]:
+/// Pure window arithmetic behind [`Dinosaur::live_reasoning_window_start`]:
 /// given the cached start and the current content, the byte offset the
 /// window should render from. Every returned offset is a character boundary
 /// of `content`, so callers may slice with it directly.

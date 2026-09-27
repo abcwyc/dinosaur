@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Waku",
+    "name": "Dinosaur",
     "slug": "waku-mobile",
     "version": "1.0.0",
     "orientation": "default",
@@ -9,17 +9,17 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "sh.waku.mobile",
+      "bundleIdentifier": "sh.dinosaur.mobile",
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocalNetworkUsageDescription": "Waku connects directly to daemon hosts you add on your local or private network.",
+        "NSLocalNetworkUsageDescription": "Dinosaur connects directly to daemon hosts you add on your local or private network.",
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         }
       }
     },
     "android": {
-      "package": "sh.waku.mobile",
+      "package": "sh.dinosaur.mobile",
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -57,8 +57,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Waku to choose photos to attach to tasks.",
-          "cameraPermission": "Allow Waku to take photos to attach to tasks.",
+          "photosPermission": "Allow Dinosaur to choose photos to attach to tasks.",
+          "cameraPermission": "Allow Dinosaur to take photos to attach to tasks.",
           "microphonePermission": false
         }
       ],

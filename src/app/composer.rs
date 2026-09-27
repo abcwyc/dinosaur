@@ -2041,7 +2041,7 @@ impl Waku {
     }
 
     /// Stage the clipboard's primary image/file representation. On-disk paths
-    /// reuse drop handling immediately; raw image bytes are copied into Waku's
+    /// reuse drop handling immediately; raw image bytes are copied into Dinosaur's
     /// durable blob store on the background executor before their chip appears.
     pub(super) fn stage_pasted_attachments(
         &mut self,
@@ -2201,7 +2201,7 @@ impl Waku {
         self.composer.update(cx, |input, cx| input.clear(cx));
         // Submission notifications already hold this entity mutably. Dispatch
         // after that effect returns so the window action can safely re-enter
-        // Waku and move focus into the Resume picker.
+        // Dinosaur and move focus into the Resume picker.
         cx.defer(|cx| cx.dispatch_action(&OpenResumePicker));
         true
     }
@@ -3899,7 +3899,7 @@ fn open_provider_settings_from_picker(
 /// Installed on this machine and not switched off in the Providers settings.
 /// Both of those are settings-level facts the user has already decided, so the
 /// tab is absent rather than dimmed — the rail offers what could be picked,
-/// not a catalog of everything Waku can speak to. A session locked to a
+/// not a catalog of everything Dinosaur can speak to. A session locked to a
 /// provider switched off afterwards keeps its own tab, since the picker is
 /// that session's only route to another model.
 pub(super) fn picker_rail_shows_provider(

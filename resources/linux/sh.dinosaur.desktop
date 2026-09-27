@@ -1,11 +1,11 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Waku
+Name=Dinosaur
 Comment=A native control plane for local coding agents
 Exec=waku
-Icon=sh.waku
+Icon=sh.dinosaur
 Terminal=false
 Categories=Development;IDE;
 StartupNotify=true
-StartupWMClass=sh.waku
+StartupWMClass=sh.dinosaur

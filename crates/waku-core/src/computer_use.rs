@@ -136,7 +136,7 @@ pub fn probe_permissions(prompt: bool) -> anyhow::Result<ComputerPermissions> {
     // A release daemon never installs or launches the helper app, not even to
     // read permission status, so production never opens its TCC prompts.
     if !is_available() {
-        bail!("Waku Computer Use is not available in this build");
+        bail!("Dinosaur Computer Use is not available in this build");
     }
     let operation = if prompt {
         json!({"operation": "requestPermissions"})
@@ -209,18 +209,18 @@ fn helper_app_path() -> anyhow::Result<PathBuf> {
     let executable = host_executable_path()?;
     let macos = executable
         .parent()
-        .ok_or_else(|| anyhow!("Waku executable has no parent directory"))?;
+        .ok_or_else(|| anyhow!("Dinosaur executable has no parent directory"))?;
     let contents = macos
         .parent()
-        .ok_or_else(|| anyhow!("Waku app bundle is malformed"))?;
+        .ok_or_else(|| anyhow!("Dinosaur app bundle is malformed"))?;
     let app_name = executable
         .file_name()
         .and_then(|name| name.to_str())
-        .ok_or_else(|| anyhow!("Waku executable name is invalid"))?;
+        .ok_or_else(|| anyhow!("Dinosaur executable name is invalid"))?;
     let helper_name = format!("{app_name} Computer Use");
     let path = contents.join("Helpers").join(format!("{helper_name}.app"));
     if !path.is_dir() {
-        bail!("Computer Use helper is missing from this Waku build")
+        bail!("Computer Use helper is missing from this Dinosaur build")
     }
     Ok(path)
 }
@@ -233,7 +233,7 @@ pub fn helper_display_name() -> String {
                 .map(|name| name.to_string_lossy().into_owned())
         })
         .map(|app_name| format!("{app_name} Computer Use"))
-        .unwrap_or_else(|| "Waku Computer Use".into())
+        .unwrap_or_else(|| "Dinosaur Computer Use".into())
 }
 
 pub fn mcp_server_command() -> anyhow::Result<PathBuf> {
@@ -262,15 +262,15 @@ fn helper_executable_name() -> &'static str {
 fn resources_directory(executable: &Path, os: &str) -> anyhow::Result<PathBuf> {
     let directory = executable
         .parent()
-        .ok_or_else(|| anyhow!("Waku executable has no parent"))?;
+        .ok_or_else(|| anyhow!("Dinosaur executable has no parent"))?;
     Ok(match os {
         "macos" => directory
             .parent()
-            .ok_or_else(|| anyhow!("Waku app bundle is malformed"))?
+            .ok_or_else(|| anyhow!("Dinosaur app bundle is malformed"))?
             .join("Resources"),
         "linux" if directory.file_name().is_some_and(|name| name == "bin") => directory
             .parent()
-            .ok_or_else(|| anyhow!("Waku installation is malformed"))?
+            .ok_or_else(|| anyhow!("Dinosaur installation is malformed"))?
             .join("share/waku"),
         _ => directory.join("resources"),
     })
@@ -278,7 +278,7 @@ fn resources_directory(executable: &Path, os: &str) -> anyhow::Result<PathBuf> {
 
 fn packaged_file(path: &Path, name: &str) -> anyhow::Result<PathBuf> {
     if !path.is_file() {
-        bail!("{name} is missing from this Waku build: {}", path.display());
+        bail!("{name} is missing from this Dinosaur build: {}", path.display());
     }
     Ok(path.to_path_buf())
 }
@@ -294,27 +294,27 @@ pub fn js_repl_server_path() -> anyhow::Result<PathBuf> {
             "waku_js_repl"
         })
     };
-    packaged_file(&path, "Waku JavaScript REPL")
+    packaged_file(&path, "Dinosaur JavaScript REPL")
 }
 
 pub fn pi_extension_path() -> anyhow::Result<PathBuf> {
     let path = resources_directory(&host_executable_path()?, std::env::consts::OS)?
         .join("computer-use/pi-extension.ts");
-    packaged_file(&path, "Waku Pi Computer Use extension")
+    packaged_file(&path, "Dinosaur Pi Computer Use extension")
 }
 
 /// Install the bundled helper as an independent, stable runtime service.
 ///
 /// Screen Recording differs from Accessibility on macOS: it follows the
-/// responsible application. A helper launched from inside Waku's bundle is
-/// therefore attributed to Waku even though the capture API runs in the
+/// responsible application. A helper launched from inside Dinosaur's bundle is
+/// therefore attributed to Dinosaur even though the capture API runs in the
 /// helper. Launching this standalone copy through Launch Services gives the
 /// helper its own TCC identity while the signed app bundle remains the source
-/// shipped with Waku.
+/// shipped with Dinosaur.
 fn install_helper_app(source: &Path) -> anyhow::Result<PathBuf> {
     let application_support =
         dirs::data_dir().ok_or_else(|| anyhow!("Application Support directory is unavailable"))?;
-    let install_root = application_support.join("Waku").join("Computer Use");
+    let install_root = application_support.join("Dinosaur").join("Computer Use");
     crate::fs_ext::create_private_dir_all(&install_root)
         .with_context(|| format!("could not create {}", install_root.display()))?;
     let bundle_name = source
@@ -386,7 +386,7 @@ pub fn skill_root_path() -> anyhow::Result<PathBuf> {
     let path = resources_directory(&host_executable_path()?, std::env::consts::OS)?.join("skills");
     packaged_file(
         &path.join("waku-computer-use/SKILL.md"),
-        "Waku Computer Use skill",
+        "Dinosaur Computer Use skill",
     )?;
     Ok(path)
 }
@@ -396,7 +396,7 @@ fn host_executable_path() -> anyhow::Result<PathBuf> {
         .filter(|path| !path.is_empty())
         .map(PathBuf::from)
         .map(Ok)
-        .unwrap_or_else(|| std::env::current_exe().context("Waku executable path is unavailable"))
+        .unwrap_or_else(|| std::env::current_exe().context("Dinosaur executable path is unavailable"))
 }
 
 #[cfg(test)]
@@ -407,9 +407,9 @@ mod tests {
     fn packaged_resources_follow_each_platform_layout() {
         for (executable, os, resources) in [
             (
-                "/Applications/Waku.app/Contents/MacOS/Waku",
+                "/Applications/Dinosaur.app/Contents/MacOS/Dinosaur",
                 "macos",
-                "/Applications/Waku.app/Contents/Resources",
+                "/Applications/Dinosaur.app/Contents/Resources",
             ),
             ("/opt/waku/bin/waku", "linux", "/opt/waku/share/waku"),
             (
@@ -417,7 +417,7 @@ mod tests {
                 "linux",
                 "/dev/waku/target/debug/resources",
             ),
-            ("/Waku/waku.exe", "windows", "/Waku/resources"),
+            ("/Dinosaur/waku.exe", "windows", "/Dinosaur/resources"),
         ] {
             assert_eq!(
                 resources_directory(Path::new(executable), os).unwrap(),

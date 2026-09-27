@@ -95,7 +95,7 @@ pub fn capture_turn(cwd: &Path, session_id: Uuid, turn_count: usize) -> anyhow::
     let end_branch = symbolic_head(cwd);
     let end_head = resolve_ref(cwd, "HEAD");
     let end_commit =
-        capture_worktree_commit_from(cwd, end_head.as_deref(), "Waku worktree snapshot", &[])?;
+        capture_worktree_commit_from(cwd, end_head.as_deref(), "Dinosaur worktree snapshot", &[])?;
     git_output(cwd, ["update-ref", &git_ref, &end_commit])?;
     let files = if turn_count == 0 {
         Vec::new()
@@ -154,7 +154,7 @@ pub fn capture_worktree_commit(cwd: &Path) -> anyhow::Result<String> {
     }
 
     let head = resolve_ref(cwd, "HEAD");
-    capture_worktree_commit_from(cwd, head.as_deref(), "Waku worktree snapshot", &[])
+    capture_worktree_commit_from(cwd, head.as_deref(), "Dinosaur worktree snapshot", &[])
 }
 
 fn capture_worktree_commit_from(
@@ -324,11 +324,11 @@ fn virtual_branch_start(
         .map(str::trim)
         .filter(|tree| !tree.is_empty())
         .ok_or_else(|| anyhow!("git merge-tree returned no tree"))?;
-    commit_tree(cwd, tree, "Waku turn diff base", &[])
+    commit_tree(cwd, tree, "Dinosaur turn diff base", &[])
 }
 
 fn empty_tree_commit(cwd: &Path) -> anyhow::Result<String> {
-    commit_tree(cwd, EMPTY_TREE, "Waku empty turn diff base", &[])
+    commit_tree(cwd, EMPTY_TREE, "Dinosaur empty turn diff base", &[])
 }
 
 fn commit_tree(
@@ -747,9 +747,9 @@ where
         .env("GIT_INDEX_FILE", index);
     if identity {
         command
-            .env("GIT_AUTHOR_NAME", "Waku")
+            .env("GIT_AUTHOR_NAME", "Dinosaur")
             .env("GIT_AUTHOR_EMAIL", "waku@localhost")
-            .env("GIT_COMMITTER_NAME", "Waku")
+            .env("GIT_COMMITTER_NAME", "Dinosaur")
             .env("GIT_COMMITTER_EMAIL", "waku@localhost");
     }
     let output = command.output().context("failed to execute git")?;
@@ -796,7 +796,7 @@ mod tests {
         let directory = std::env::temp_dir().join(format!("waku-checkpoints-{}", Uuid::new_v4()));
         fs::create_dir_all(&directory).unwrap();
         git_ok(&directory, &["init", "--quiet", "--initial-branch=main"]);
-        git_ok(&directory, &["config", "user.name", "Waku Test"]);
+        git_ok(&directory, &["config", "user.name", "Dinosaur Test"]);
         git_ok(&directory, &["config", "user.email", "waku@example.com"]);
         fs::write(directory.join("shared.txt"), "shared\n").unwrap();
         git_ok(&directory, &["add", "shared.txt"]);
@@ -826,7 +826,7 @@ mod tests {
             &directory,
             &[
                 "-c",
-                "user.name=Waku Test",
+                "user.name=Dinosaur Test",
                 "-c",
                 "user.email=waku@example.com",
                 "commit",
@@ -866,7 +866,7 @@ mod tests {
             &directory,
             &[
                 "-c",
-                "user.name=Waku Test",
+                "user.name=Dinosaur Test",
                 "-c",
                 "user.email=waku@example.com",
                 "commit",
@@ -942,7 +942,7 @@ mod tests {
             &directory,
             &[
                 "-c",
-                "user.name=Waku Test",
+                "user.name=Dinosaur Test",
                 "-c",
                 "user.email=waku@example.com",
                 "commit",

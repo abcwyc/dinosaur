@@ -95,7 +95,7 @@ enum PendingBackgroundRpc {
     Stop(BackgroundWorkKey),
 }
 
-/// Waku-originated `thread/goal/*` requests awaiting their responses, plus
+/// Dinosaur-originated `thread/goal/*` requests awaiting their responses, plus
 /// whether this Codex build answered the initial probe with "method not
 /// found" — older app-servers have no goal API and should stay quiet.
 #[derive(Default)]
@@ -169,7 +169,7 @@ impl CodexComputerUseConfig {
     }
 }
 
-/// Register Waku's long-lived QuickJS MCP server and keep the raw native helper
+/// Register Dinosaur's long-lived QuickJS MCP server and keep the raw native helper
 /// private behind its built-in `cua` object. Codex sees only the compact
 /// `js` / `js_reset` execution surface.
 fn configure_computer_use_command(command: &mut Command, config: Option<&CodexComputerUseConfig>) {
@@ -316,7 +316,7 @@ impl CodexDriver {
                     "params": {
                         "clientInfo": {
                             "name": "waku",
-                            "title": "Waku",
+                            "title": "Dinosaur",
                             "version": env!("CARGO_PKG_VERSION")
                         },
                         "capabilities": {
@@ -341,7 +341,7 @@ impl CodexDriver {
                 }
 
                 if let Some(computer_use_skill_root) = computer_use_skill_root {
-                    // Register Waku's bundled skill through Codex's discoverable-skill
+                    // Register Dinosaur's bundled skill through Codex's discoverable-skill
                     // mechanism. Keep the skill out of developerInstructions so it is
                     // loaded and displayed like Codex's own bundled skills.
                     if write_json_line(
@@ -705,7 +705,7 @@ impl CodexDriver {
                             let Some(thread_id) = wait_for_thread_id(&writer_thread_id) else {
                                 continue;
                             };
-                            // Update Waku even if persisting the name back to
+                            // Update Dinosaur even if persisting the name back to
                             // Codex fails; the app-server notification will
                             // echo the same value when the write succeeds.
                             let _ = writer_events
@@ -902,7 +902,7 @@ fn turn_start_params(
         "approvalPolicy": approval_policy,
         "approvalsReviewer": approvals_reviewer,
         "sandboxPolicy": codex_sandbox_policy(sandbox),
-        // Some current models default reasoning summaries to `none`. Waku has
+        // Some current models default reasoning summaries to `none`. Dinosaur has
         // a native reasoning disclosure, so explicitly request readable text.
         "summary": "auto"
     })
@@ -1198,7 +1198,7 @@ fn generate_codex_title(binary: &Path, cwd: &Path, prompt: &str) -> anyhow::Resu
                 "params": {
                     "clientInfo": {
                         "name": "waku-title",
-                        "title": "Waku Title",
+                        "title": "Dinosaur Title",
                         "version": env!("CARGO_PKG_VERSION")
                     },
                     "capabilities": {"experimentalApi": true}
@@ -1635,8 +1635,8 @@ fn handle_codex_message(
     stream_state: &mut CodexStreamState,
 ) {
     // JSON-RPC IDs are scoped to each peer, so an app-server request may use
-    // the same numeric ID as one of Waku's earlier requests. Only messages
-    // without a method are responses to Waku-originated requests.
+    // the same numeric ID as one of Dinosaur's earlier requests. Only messages
+    // without a method are responses to Dinosaur-originated requests.
     let is_response = value.get("method").is_none();
     let pending_goal = is_response
         .then(|| value.get("id").and_then(Value::as_u64))
@@ -3031,7 +3031,7 @@ mod tests {
             .map(|argument| argument.to_string_lossy().into_owned())
             .collect::<Vec<_>>();
         // The raw helper must never be registered as a Codex MCP server: the
-        // Waku REPL owns it and exposes only `cua` inside JavaScript.
+        // Dinosaur REPL owns it and exposes only `cua` inside JavaScript.
         assert!(
             !enabled_arguments
                 .iter()

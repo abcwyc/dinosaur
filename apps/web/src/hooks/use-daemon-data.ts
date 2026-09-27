@@ -237,7 +237,7 @@ export function useUsageHistory(
 }
 
 function requireClient<T>(client: T | null): T {
-  if (!client) throw new Error('Waku daemon is disconnected')
+  if (!client) throw new Error('Dinosaur daemon is disconnected')
   return client
 }
 

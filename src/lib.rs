@@ -192,8 +192,11 @@ impl WakuApplicationExt for Application {
 }
 
 pub fn run() {
+    // Before the daemon or any store resolves a path under the renamed data
+    // directory.
+    waku_protocol::identity::migrate_legacy_data_directory();
     let daemon = crate::daemon::start_process()
-        .unwrap_or_else(|error| panic!("failed to start Waku daemon: {error:#}"));
+        .unwrap_or_else(|error| panic!("failed to start Dinosaur daemon: {error:#}"));
     gpui_platform::application()
         .with_assets(crate::assets::Assets)
         .with_main_window_reopen()
@@ -265,7 +268,7 @@ pub fn run() {
                 // the editor without moving focus to the bar.
                 KeyBinding::new("secondary-f", OpenFind, Some("Waku")),
                 // The text input's macOS-style Ctrl-F caret binding is more
-                // specific than Waku's root context. Reassert the platform
+                // specific than Dinosaur's root context. Reassert the platform
                 // primary shortcut for inputs inside this window so Ctrl-F
                 // remains find-in-page on Linux/Windows while Cmd-F keeps the
                 // native behavior on macOS.
@@ -332,7 +335,7 @@ pub fn run() {
                             // Windows creates the window without `WS_CAPTION`
                             // either way; asking for the transparent titlebar
                             // is what extends the client area over the frame
-                            // so Waku's own header can host the caption
+                            // so Dinosaur's own header can host the caption
                             // buttons and drag region.
                             appears_transparent: cfg!(any(
                                 target_os = "macos",
@@ -341,7 +344,7 @@ pub fn run() {
                             traffic_light_position: cfg!(target_os = "macos")
                                 .then(|| point(px(16.0), px(17.0))),
                         }),
-                        // Waku moves its custom macOS titlebar explicitly. Keep
+                        // Dinosaur moves its custom macOS titlebar explicitly. Keep
                         // the NSWindow movable so native controls and Window-menu
                         // tiling remain enabled.
                         is_movable: true,
@@ -354,7 +357,7 @@ pub fn run() {
                         app_id: Some(APP_ID.to_owned()),
                         // GPUI defaults to compositor/server decorations. If a
                         // Wayland compositor declines them, it reports the
-                        // client fallback and Waku renders that frame itself.
+                        // client fallback and Dinosaur renders that frame itself.
                         #[cfg(target_os = "linux")]
                         icon: crate::platform::linux_app_icon(),
                         window_bounds: Some(window_bounds),
@@ -370,7 +373,7 @@ pub fn run() {
                         waku
                     },
                 )
-                .expect("failed to open Waku window");
+                .expect("failed to open Dinosaur window");
 
             cx.on_system_notification_response({
                 let window = window;
