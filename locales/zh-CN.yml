@@ -235,6 +235,12 @@ sidebar.grouping_updated: 更新时间
 sidebar.ordering: 排序
 sidebar.ordering_newest: 最新优先
 sidebar.ordering_oldest: 最旧优先
+sidebar.agent_history: Agent 历史
+sidebar.agent_history_files: 读取本地文件
+sidebar.agent_history_processes: 需启动 agent 读取（每 10 分钟刷新）
+sidebar.pin_project: 置顶项目
+sidebar.unpin_project: 取消置顶
+sidebar.reset_project_name: 恢复默认名称
 sidebar.show_more: 显示更多
 sidebar.yesterday: 昨天
 sidebar.this_week: 本周

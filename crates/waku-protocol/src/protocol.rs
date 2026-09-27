@@ -191,6 +191,12 @@ pub enum Command {
         provider: ProviderKind,
         limit: usize,
     },
+    /// List provider-native conversations from the daemon's incremental index,
+    /// newest first, at most `limit` per provider.
+    ListNativeSessions {
+        providers: Vec<ProviderKind>,
+        limit: usize,
+    },
     /// Load the user-visible transcript for one provider-native conversation.
     LoadProviderSession {
         cursor: ProviderResumeCursor,
@@ -424,6 +430,9 @@ pub enum ResponsePayload {
     },
     ProviderSessions {
         sessions: Vec<ProviderSessionSummary>,
+    },
+    NativeSessions {
+        sessions: Vec<crate::native_session::NativeSessionSummary>,
     },
     ProviderSessionHistory {
         history: ProviderSessionHistory,

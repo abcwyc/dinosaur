@@ -284,7 +284,7 @@ fn summary_from_session(
     })
 }
 
-fn session_roots(provider: ProviderKind) -> anyhow::Result<Vec<PathBuf>> {
+pub(crate) fn session_roots(provider: ProviderKind) -> anyhow::Result<Vec<PathBuf>> {
     let home = dirs::home_dir().ok_or_else(|| anyhow!("home directory could not be located"))?;
     let expand_home = |path: PathBuf| {
         if path == Path::new("~") {
@@ -337,7 +337,7 @@ fn session_roots(provider: ProviderKind) -> anyhow::Result<Vec<PathBuf>> {
     }
 }
 
-fn session_files(root: &Path) -> Vec<PathBuf> {
+pub(crate) fn session_files(root: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     let Ok(entries) = fs::read_dir(root) else {
         return files;
@@ -360,6 +360,15 @@ fn session_files(root: &Path) -> Vec<PathBuf> {
         }
     }
     files
+}
+
+/// Summary of one native session file, for the incremental native index.
+pub(crate) fn summary_for_file(
+    provider: ProviderKind,
+    path: &Path,
+) -> Option<ProviderSessionSummary> {
+    let parsed = parse_session(path).ok()?;
+    summary_from_session(provider, path, &parsed)
 }
 
 pub fn list_provider_sessions(

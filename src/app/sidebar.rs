@@ -5,7 +5,7 @@ use super::*;
 
 actions!(waku_sidebar, [CancelSessionRename]);
 
-const SESSION_RENAME_PARENT_CONTEXT: &str = "SessionRename";
+pub(super) const SESSION_RENAME_PARENT_CONTEXT: &str = "SessionRename";
 const SESSION_RENAME_FIELD_CONTEXT: &str = "SessionRename > TextInput";
 
 /// Keep Escape inside the focused inline editor so it cancels the rename,
@@ -206,7 +206,7 @@ fn updater_button_available_content(
 /// virtualized sidebar list. Keep the gap inside the list row so measured and
 /// estimated heights stay identical for off-screen sessions.
 const SIDEBAR_SESSION_CARD_HEIGHT: f32 = 51.0;
-const SIDEBAR_SESSION_ROW_GAP: f32 = 1.0;
+pub(super) const SIDEBAR_SESSION_ROW_GAP: f32 = 1.0;
 const SIDEBAR_SESSION_ROW_HEIGHT: f32 = SIDEBAR_SESSION_CARD_HEIGHT + SIDEBAR_SESSION_ROW_GAP;
 const SIDEBAR_ACTION_ROW_HEIGHT: f32 = 32.0;
 const SIDEBAR_SEARCH_BOTTOM_GAP: f32 = 10.0;
@@ -214,8 +214,8 @@ const SIDEBAR_GROUP_HEADER_HEIGHT: f32 = 28.0;
 const SIDEBAR_GROUP_HEADER_BOTTOM_GAP: f32 = 2.0;
 const SIDEBAR_SHOW_MORE_ROW_HEIGHT: f32 = 30.0;
 const SIDEBAR_GROUP_SPACER_HEIGHT: f32 = 10.0;
-const SIDEBAR_GROUP_GUIDE_X: f32 = 15.0;
-const SIDEBAR_GROUP_CHILD_PADDING: f32 = 28.0;
+pub(super) const SIDEBAR_GROUP_GUIDE_X: f32 = 15.0;
+pub(super) const SIDEBAR_GROUP_CHILD_PADDING: f32 = 28.0;
 const SIDEBAR_PROJECT_RECENT_WINDOW_SECONDS: u64 = 3 * 24 * 60 * 60;
 const SIDEBAR_PROJECT_REVEAL_BATCH: usize = 30;
 
@@ -341,6 +341,8 @@ pub(super) enum SidebarRow {
     Header(SidebarGroup),
     /// A started session.
     Session(Uuid),
+    /// A provider-native conversation not yet imported (see `native_catalog`).
+    Native(Uuid),
     /// Reveals the next batch of older sessions in a project section.
     ShowMore(SidebarGroup),
     /// Spacing between date groups.
@@ -356,7 +358,7 @@ fn sidebar_row_height(row: SidebarRow) -> Pixels {
     px(match row {
         SidebarRow::Search => SIDEBAR_ACTION_ROW_HEIGHT + SIDEBAR_SEARCH_BOTTOM_GAP,
         SidebarRow::Header(_) => SIDEBAR_GROUP_HEADER_HEIGHT + SIDEBAR_GROUP_HEADER_BOTTOM_GAP,
-        SidebarRow::Session(_) => SIDEBAR_SESSION_ROW_HEIGHT,
+        SidebarRow::Session(_) | SidebarRow::Native(_) => SIDEBAR_SESSION_ROW_HEIGHT,
         SidebarRow::ShowMore(_) => SIDEBAR_SHOW_MORE_ROW_HEIGHT,
         SidebarRow::GroupSpacer => SIDEBAR_GROUP_SPACER_HEIGHT,
     })
@@ -598,6 +600,7 @@ impl Waku {
         let weak = cx.entity().downgrade();
         let grouping = self.state.sidebar_grouping;
         let ordering = self.state.sidebar_ordering;
+        let agent_history = self.native_history_menu(cx);
         let options = dropdown_menu(
             div()
                 .id("sidebar-options")
@@ -665,6 +668,7 @@ impl Waku {
                             ]
                         },
                     ),
+                    agent_history(),
                 ]
             },
         );
@@ -1206,6 +1210,11 @@ impl Waku {
                 revealed,
             );
         }
+        fingerprint = mix(
+            fingerprint,
+            self.native_catalog
+                .fingerprint(now.saturating_sub(SIDEBAR_PROJECT_RECENT_WINDOW_SECONDS)),
+        );
         // A set has no stable iteration order; combine order-independently.
         let collapsed = self
             .sidebar_collapsed_groups
@@ -1239,11 +1248,18 @@ impl Waku {
         match self.state.sidebar_grouping {
             SidebarGrouping::Updated => {
                 let mut grouped_sessions: [Vec<Uuid>; 6] = std::array::from_fn(|_| Vec::new());
-                for session in sorted_sessions {
+                for session in &sorted_sessions {
                     grouped_sessions
                         [session_date_group(sidebar_session_timestamp(session), today).index()]
                     .push(session.id);
                 }
+                let timestamps = sorted_sessions
+                    .iter()
+                    .map(|session| (session.id, sidebar_session_timestamp(session)))
+                    .collect::<HashMap<_, _>>();
+                self.merge_native_date_groups(&mut grouped_sessions, &timestamps, |timestamp| {
+                    session_date_group(timestamp, today).index()
+                });
                 let mut groups = SessionDateGroup::ALL;
                 if self.state.sidebar_ordering == SidebarOrdering::Oldest {
                     groups.reverse();
@@ -1261,7 +1277,7 @@ impl Waku {
             }
             SidebarGrouping::Project => {
                 let recent_cutoff = now.saturating_sub(SIDEBAR_PROJECT_RECENT_WINDOW_SECONDS);
-                let session_timestamps = sorted_sessions
+                let mut session_timestamps = sorted_sessions
                     .iter()
                     .map(|session| (session.id, sidebar_session_timestamp(session)))
                     .collect::<HashMap<_, _>>();
@@ -1275,9 +1291,13 @@ impl Waku {
                     })
                     .map(|project| project.id)
                     .collect::<HashSet<_>>();
-                for (group, sessions) in
-                    project_sidebar_groups(&sorted_sessions, &projectless_project_ids)
-                {
+                let mut groups = project_sidebar_groups(&sorted_sessions, &projectless_project_ids);
+                self.merge_native_project_groups(
+                    &mut groups,
+                    &mut session_timestamps,
+                    &projectless_project_ids,
+                );
+                for (group, sessions) in groups {
                     let revealed_older_sessions = self
                         .sidebar_project_reveal_counts
                         .get(&group)
@@ -1327,6 +1347,7 @@ impl Waku {
             };
             rows.push(SidebarRow::Header(group));
         }
+        self.tag_native_sidebar_rows(&mut rows);
         rows
     }
 
@@ -1368,7 +1389,10 @@ impl Waku {
             SidebarRow::Search => self.render_sidebar_search(cx).into_any_element(),
             SidebarRow::Header(group) => {
                 let has_expanded_children = rows.get(index + 1).is_some_and(|row| {
-                    matches!(row, SidebarRow::Session(_) | SidebarRow::ShowMore(_))
+                    matches!(
+                        row,
+                        SidebarRow::Session(_) | SidebarRow::Native(_) | SidebarRow::ShowMore(_)
+                    )
                 });
                 self.render_sidebar_group_header(group, index == 1, has_expanded_children, cx)
                     .into_any_element()
@@ -1376,6 +1400,7 @@ impl Waku {
             SidebarRow::Session(session_id) => self
                 .render_sidebar_session_item(session_id, cx)
                 .into_any_element(),
+            SidebarRow::Native(id) => self.render_native_session_item(id, cx),
             SidebarRow::ShowMore(group) => {
                 self.render_sidebar_show_more(group, cx).into_any_element()
             }
@@ -1413,11 +1438,15 @@ impl Waku {
         let label = match group {
             SidebarGroup::Updated(group) => group.label(),
             SidebarGroup::Project(project_id) => self
-                .state
-                .projects
-                .iter()
-                .find(|project| project.id == project_id)
-                .map(Project::display_name)
+                .custom_project_label(project_id)
+                .or_else(|| {
+                    self.state
+                        .projects
+                        .iter()
+                        .find(|project| project.id == project_id)
+                        .map(Project::display_name)
+                })
+                .or_else(|| self.native_project_label(project_id))
                 .unwrap_or_else(|| tr!("project.no_project_name")),
             SidebarGroup::Projectless => tr!("project.no_project_name"),
         };
@@ -1519,7 +1548,7 @@ impl Waku {
                             .flex()
                             .items_center()
                             .gap(px(2.0))
-                            .child(div().min_w_0().truncate().child(label))
+                            .child(self.render_project_header_label(group, label, cx))
                             .when_some(updated_chevron, |element, chevron| element.child(chevron)),
                     )
                     .child(div().flex_1()),
@@ -1540,9 +1569,14 @@ impl Waku {
                 )
             })
             .on_click(cx.listener(move |this, _, _, cx| {
-                this.toggle_sidebar_group(group, cx);
+                if !this.is_renaming_project_group(group) {
+                    this.toggle_sidebar_group(group, cx);
+                }
             }))
             .on_key_down(cx.listener(move |this, event: &KeyDownEvent, _, cx| {
+                if this.is_renaming_project_group(group) {
+                    return;
+                }
                 match event.keystroke.key.as_str() {
                     "enter" | "space" => {
                         this.toggle_sidebar_group(group, cx);
@@ -1563,7 +1597,7 @@ impl Waku {
         div()
             .w_full()
             .pb(px(SIDEBAR_GROUP_HEADER_BOTTOM_GAP))
-            .child(header)
+            .child(self.project_header_menu(group, header, cx))
     }
 
     fn open_new_task_for_sidebar_group(
@@ -1574,7 +1608,10 @@ impl Waku {
     ) {
         self.settings_page = None;
         match group {
-            SidebarGroup::Project(project_id) => self.select_project(project_id, cx),
+            SidebarGroup::Project(project_id) => {
+                let project_id = self.adopt_native_project(project_id);
+                self.select_project(project_id, cx)
+            }
             SidebarGroup::Projectless => self.create_projectless_session(cx),
             SidebarGroup::Updated(_) => return,
         }
@@ -1745,6 +1782,9 @@ impl Waku {
     }
 
     pub(super) fn commit_session_rename(&mut self, cx: &mut Context<Self>) {
+        if self.commit_project_rename(cx) {
+            return;
+        }
         let Some(session_id) = self.session_rename.take() else {
             return;
         };

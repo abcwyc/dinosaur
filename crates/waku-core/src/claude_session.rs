@@ -65,7 +65,7 @@ pub fn provider_session_history(
     provider_session_history_in(&projects_directory()?, session_id, turn_limit)
 }
 
-fn projects_directory() -> anyhow::Result<PathBuf> {
+pub(crate) fn projects_directory() -> anyhow::Result<PathBuf> {
     let config_directory = std::env::var_os("CLAUDE_CONFIG_DIR")
         .filter(|value| !value.is_empty())
         .map(PathBuf::from)
@@ -262,7 +262,7 @@ fn title_from_prompt(prompt: &str) -> Option<String> {
     Some(title)
 }
 
-fn session_summary_from_path(path: &Path) -> anyhow::Result<ProviderSessionSummary> {
+pub(crate) fn session_summary_from_path(path: &Path) -> anyhow::Result<ProviderSessionSummary> {
     let session_id = path
         .file_stem()
         .and_then(|stem| stem.to_str())
@@ -352,7 +352,9 @@ fn history_timestamp(value: &Value) -> u64 {
     }
 }
 
-fn provider_session_files(projects_directory: &Path) -> anyhow::Result<Vec<(u64, PathBuf)>> {
+pub(crate) fn provider_session_files(
+    projects_directory: &Path,
+) -> anyhow::Result<Vec<(u64, PathBuf)>> {
     let mut candidates = Vec::new();
     for project in fs::read_dir(projects_directory).with_context(|| {
         format!(

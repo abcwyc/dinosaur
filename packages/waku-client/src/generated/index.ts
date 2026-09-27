@@ -38,6 +38,7 @@ export type { MessageAttachment } from "./MessageAttachment";
 export type { MessageRole } from "./MessageRole";
 export type { ModelSlice } from "./ModelSlice";
 export type { MonthSlice } from "./MonthSlice";
+export type { NativeSessionSummary } from "./NativeSessionSummary";
 export type { PlanUsage } from "./PlanUsage";
 export type { PlanWindow } from "./PlanWindow";
 export type { PricingStatus } from "./PricingStatus";

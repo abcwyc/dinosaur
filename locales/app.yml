@@ -488,6 +488,18 @@ sidebar.ordering_newest:
   en: Newest first
 sidebar.ordering_oldest:
   en: Oldest first
+sidebar.agent_history:
+  en: Agent history
+sidebar.agent_history_files:
+  en: Read from local files
+sidebar.agent_history_processes:
+  en: Starts the agent to list (refreshed every 10 min)
+sidebar.pin_project:
+  en: Pin project
+sidebar.unpin_project:
+  en: Unpin project
+sidebar.reset_project_name:
+  en: Reset name
 sidebar.show_more:
   en: Show more
 sidebar.yesterday:

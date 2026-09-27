@@ -43,6 +43,7 @@ pub mod identity;
 pub mod kimi_session;
 pub mod model;
 pub mod model_catalog;
+pub mod native_index;
 pub mod opencode2_api;
 pub mod opencode2_service;
 pub mod opencode2_session;

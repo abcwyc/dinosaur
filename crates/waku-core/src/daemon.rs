@@ -54,6 +54,7 @@ pub struct WakuBackend {
     composer_drafts: ComposerDraftStore,
     attachments: AttachmentStore,
     usage_scan_cache: Mutex<crate::usage_history::ScanCache>,
+    native_index: crate::native_index::NativeIndex,
     checkpoint_capture_locks: Mutex<HashMap<(PathBuf, Uuid, usize), Arc<Mutex<()>>>>,
     usage_rates_dir: std::path::PathBuf,
     default_cwd: std::path::PathBuf,
@@ -78,6 +79,7 @@ impl WakuBackend {
             .parent()
             .unwrap_or_else(|| std::path::Path::new("."))
             .to_owned();
+        let native_index = crate::native_index::NativeIndex::new(task_store.path().parent());
         Ok(Self {
             sessions: Mutex::new(HashMap::new()),
             terminals: Mutex::new(HashMap::new()),
@@ -90,6 +92,7 @@ impl WakuBackend {
             composer_drafts,
             attachments,
             usage_scan_cache: Mutex::new(HashMap::new()),
+            native_index,
             checkpoint_capture_locks: Mutex::new(HashMap::new()),
             usage_rates_dir,
             default_cwd: std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
@@ -556,6 +559,16 @@ impl Backend for WakuBackend {
                 });
                 sessions.truncate(limit);
                 Ok(ResponsePayload::ProviderSessions { sessions })
+            }
+            Command::ListNativeSessions { providers, limit } => {
+                let disabled = self.settings.get().disabled_providers;
+                let providers = providers
+                    .into_iter()
+                    .filter(|provider| !disabled.contains(provider))
+                    .collect::<Vec<_>>();
+                Ok(ResponsePayload::NativeSessions {
+                    sessions: self.native_index.list(&providers, limit.min(1_000)),
+                })
             }
             Command::LoadProviderSession { cursor, cwd } => {
                 // Preserve every native turn shell for exact provider turn
@@ -1844,6 +1857,7 @@ fn handle_driver_command(
         | Command::HydrateSession { .. }
         | Command::SearchSessionMessages { .. }
         | Command::ListProviderSessions { .. }
+        | Command::ListNativeSessions { .. }
         | Command::LoadProviderSession { .. }
         | Command::LoadComposerDrafts
         | Command::SaveComposerDrafts { .. }

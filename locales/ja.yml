@@ -247,6 +247,12 @@ sidebar.grouping_updated: 更新日
 sidebar.ordering: 並び順
 sidebar.ordering_newest: 新しい順
 sidebar.ordering_oldest: 古い順
+sidebar.agent_history: エージェント履歴
+sidebar.agent_history_files: ローカルファイルから読み込み
+sidebar.agent_history_processes: エージェントを起動して取得（10 分ごとに更新）
+sidebar.pin_project: プロジェクトをピン留め
+sidebar.unpin_project: ピン留めを解除
+sidebar.reset_project_name: 名前をリセット
 sidebar.show_more: もっと見る
 sidebar.yesterday: 昨日
 sidebar.this_week: 今週

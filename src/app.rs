@@ -1328,6 +1328,9 @@ pub struct Waku {
     /// Number of older sessions revealed inside each project section. This is
     /// runtime-only so every launch starts with the recent three-day view.
     sidebar_project_reveal_counts: HashMap<SidebarGroup, usize>,
+    /// Provider-native history merged into the sidebar before import.
+    native_catalog: native_catalog::NativeCatalog,
+    native_row_focuses: RefCell<HashMap<Uuid, FocusHandle>>,
     /// Stable keyboard focus for each virtualized sidebar group header and
     /// its hover-revealed New Task control.
     sidebar_group_header_focuses: RefCell<HashMap<SidebarGroup, FocusHandle>>,
@@ -1620,6 +1623,8 @@ mod drafts;
 mod file_search;
 mod goal_dialog;
 mod image_preview;
+mod native_catalog;
+mod native_projects;
 mod render;
 mod right_panel;
 mod runtime;
@@ -2689,6 +2694,21 @@ impl Waku {
 
             cx.spawn(async move |this, cx| {
                 loop {
+                    if this
+                        .update(cx, |this, cx| this.refresh_native_catalog(cx))
+                        .is_err()
+                    {
+                        break;
+                    }
+                    cx.background_executor()
+                        .timer(native_catalog::NATIVE_CATALOG_REFRESH_INTERVAL)
+                        .await;
+                }
+            })
+            .detach();
+
+            cx.spawn(async move |this, cx| {
+                loop {
                     cx.background_executor()
                         .timer(IDLE_SESSION_SWEEP_INTERVAL)
                         .await;
@@ -2860,6 +2880,8 @@ impl Waku {
                 session_rename_input,
                 sidebar_collapsed_groups: HashSet::new(),
                 sidebar_project_reveal_counts: HashMap::new(),
+                native_catalog: native_catalog::NativeCatalog::load(),
+                native_row_focuses: RefCell::new(HashMap::new()),
                 sidebar_group_header_focuses: RefCell::new(HashMap::new()),
                 sidebar_group_compose_focuses: RefCell::new(HashMap::new()),
                 sidebar_show_more_focuses: RefCell::new(HashMap::new()),
