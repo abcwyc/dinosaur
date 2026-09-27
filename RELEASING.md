@@ -62,23 +62,23 @@ Local builds run on [Bun](https://bun.sh) and need
 Updates are signed with an ed25519 key; the public half ships in Info.plist as
 `SUPublicEDKey`, and the private half signs every feed.
 
-> ⚠️ The `SUPublicEDKey` currently in Info.plist is inherited from the upstream
-> Waku project. Dinosaur's releases cannot be signed with it, so generate a key
-> of your own before the first release.
+The key lives in the login keychain under the **`dinosaur`** account (not
+Sparkle's default one), and the same private key is stored as the
+`SPARKLE_PRIVATE_KEY` repository secret. Local runs of `bun run release` sign
+from the keychain; CI signs from the secret.
 
-With the Sparkle tools (they land in `.waku-cache/sparkle/<version>/bin` after
-any macOS build, or download the release from
+On a fresh machine, import the key from the password-manager backup with the
+Sparkle tools (they land in `.waku-cache/sparkle/<version>/bin` after any
+macOS build, or download the release from
 [sparkle-project/Sparkle](https://github.com/sparkle-project/Sparkle/releases)):
 
 ```sh
-./bin/generate_keys --account dinosaur          # creates the key in the keychain
-./bin/generate_keys --account dinosaur -p       # prints the public key
-./bin/generate_keys --account dinosaur -x sparkle_private_key.txt
+./bin/generate_keys --account dinosaur -f sparkle_private_key.txt  # import
+./bin/generate_keys --account dinosaur -p   # must print SUPublicEDKey
 ```
 
-Put the printed public key in `resources/Info.plist` as `SUPublicEDKey`, store
-the contents of `sparkle_private_key.txt` as the `SPARKLE_PRIVATE_KEY`
-repository secret, back it up in a password manager, and delete the file.
+To back the key up, `./bin/generate_keys --account dinosaur -x <file>` exports
+it; move that file into the password manager and delete it.
 
 > ⚠️ Lose the private key and existing installs can never update again. Keep
 > the backup current.

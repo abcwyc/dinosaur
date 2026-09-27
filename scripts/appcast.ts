@@ -22,6 +22,9 @@ const projectRoot = resolve(import.meta.dir, "..");
 /** The GitHub repository whose releases host every download and update feed. */
 export const releaseRepository = "abcwyc/dinosaur";
 
+/** The login-keychain account `generate_keys --account` stored the key under. */
+export const sparkleKeychainAccount = "dinosaur";
+
 const releasesUrl = `https://github.com/${releaseRepository}/releases`;
 
 /** Where one version's assets are served: its `v<version>` GitHub release. */
@@ -75,7 +78,11 @@ export async function generateAppcast(
     downloadUrlPrefix,
     "--release-notes-url-prefix",
     downloadUrlPrefix,
-    ...(privateKey ? ["--ed-key-file", "-"] : []),
+    // Dinosaur's key lives under its own keychain account, not Sparkle's
+    // default one.
+    ...(privateKey
+      ? ["--ed-key-file", "-"]
+      : ["--account", sparkleKeychainAccount]),
     updatesDir,
   ];
   // The key is fed on stdin (`--ed-key-file -`) so it never lands on disk.
