@@ -1,10 +1,13 @@
 # Changelog
 
-All notable changes to Waku. This file is the **source of truth for the release
+All notable changes to Dinosaur. This file is the **source of truth for the release
 notes shown in the in-app updater**: [`scripts/release.ts`](scripts/release.ts)
 extracts the section whose heading matches the version being released
 (`MARKETING_VERSION`) and publishes it next to the update, so Sparkle shows it in
 the update prompt.
+
+Sections after 0.1.0 (Dinosaur) are the history of Waku, the project Dinosaur
+is based on.
 
 Format follows [Keep a Changelog](https://keepachangelog.com). Add a new
 `## [<version>]` section at the top for each release, matching the version you
@@ -15,6 +18,15 @@ history. When a feature is still unreleased, fold its fixes and refinements into
 the original feature bullet instead of adding separate entries for them.
 
 ## [unreleased]
+
+## [0.1.0]
+
+- First release as Dinosaur, with a new name and a pixel dinosaur app icon
+- Existing Waku data moves to Dinosaur's data directory on first launch
+- Updates are published from the abcwyc/dinosaur GitHub releases
+- The macOS build is not notarized yet: on first launch, right-click the app
+  and choose **Open**, or run
+  `xattr -dr com.apple.quarantine /Applications/Dinosaur.app`
 
 ## [0.1.19]
 

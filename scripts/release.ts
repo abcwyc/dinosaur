@@ -161,8 +161,9 @@ if (explicitBuildNumber && !/^\d+(?:\.\d+){0,2}$/.test(explicitBuildNumber)) {
   );
 }
 if (!values["skip-build"] && (!analyticsEndpoint || !analyticsWebsiteId)) {
-  throw new Error(
-    "Set WAKU_ANALYTICS_ENDPOINT and WAKU_ANALYTICS_WEBSITE_ID before building a release.",
+  console.warn(
+    "WAKU_ANALYTICS_ENDPOINT and WAKU_ANALYTICS_WEBSITE_ID are not both set; " +
+      "this build ships with analytics disabled.",
   );
 }
 
