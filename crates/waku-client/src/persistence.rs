@@ -39,8 +39,8 @@ pub const DEFAULT_RIGHT_PANEL_WIDTH: f32 = 460.0;
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SidebarGrouping {
-    Project,
     #[default]
+    Project,
     Updated,
 }
 
@@ -458,7 +458,7 @@ impl PersistedState {
             sidebar_visible: true,
             right_panel_visible: false,
             sidebar_width: DEFAULT_SIDEBAR_WIDTH,
-            sidebar_grouping: SidebarGrouping::Updated,
+            sidebar_grouping: SidebarGrouping::Project,
             sidebar_ordering: SidebarOrdering::Newest,
             right_panel_width: DEFAULT_RIGHT_PANEL_WIDTH,
             markdown_preview: false,
@@ -898,6 +898,52 @@ impl StateStore {
         }
     }
 
+    pub fn native_sessions(
+        &self,
+        providers: Vec<ProviderKind>,
+        limit: usize,
+    ) -> impl FnOnce() -> io::Result<Vec<waku_protocol::native_session::NativeSessionSummary>>
+    + Send
+    + 'static {
+        let daemon = self.daemon.clone();
+        move || match daemon
+            .client()
+            .request(
+                Uuid::nil(),
+                Uuid::nil(),
+                Command::ListNativeSessions { providers, limit },
+            )
+            .map_err(to_io_error)?
+        {
+            ResponsePayload::NativeSessions { sessions } => Ok(sessions),
+            _ => Err(io::Error::other(
+                "Dinosaur daemon returned an invalid native-session response",
+            )),
+        }
+    }
+
+    pub fn pull_requests(
+        &self,
+        targets: Vec<waku_protocol::native_session::PullRequestTarget>,
+    ) -> impl FnOnce() -> io::Result<Vec<waku_protocol::native_session::PullRequestInfo>> + Send + 'static
+    {
+        let daemon = self.daemon.clone();
+        move || match daemon
+            .client()
+            .request(
+                Uuid::nil(),
+                Uuid::nil(),
+                Command::LookupPullRequests { targets },
+            )
+            .map_err(to_io_error)?
+        {
+            ResponsePayload::PullRequests { pull_requests } => Ok(pull_requests),
+            _ => Err(io::Error::other(
+                "Dinosaur daemon returned an invalid pull-request response",
+            )),
+        }
+    }
+
     pub fn provider_session_history(
         &self,
         cursor: ProviderResumeCursor,
@@ -1188,7 +1234,7 @@ mod tests {
     fn legacy_app_state_defaults_sidebar_presentation() {
         let state: AppState = serde_json::from_str(r#"{"app_state_version":1}"#).unwrap();
 
-        assert_eq!(state.sidebar_grouping, SidebarGrouping::Updated);
+        assert_eq!(state.sidebar_grouping, SidebarGrouping::Project);
         assert_eq!(state.sidebar_ordering, SidebarOrdering::Newest);
         assert_eq!(state.last_runtime_mode, RuntimeMode::FullAccess);
     }

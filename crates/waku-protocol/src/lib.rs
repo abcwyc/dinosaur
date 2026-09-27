@@ -37,6 +37,7 @@ pub mod i18n;
 pub mod identity;
 pub mod model;
 pub mod model_catalog;
+pub mod native_session;
 pub mod persistence;
 pub mod projectless;
 pub mod provider_session;

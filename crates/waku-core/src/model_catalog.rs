@@ -98,6 +98,8 @@ pub fn fallback_models(provider: ProviderKind) -> Vec<ProviderModel> {
         // configured LLM providers. A fabricated fallback would make
         // unavailable models look selectable.
         ProviderKind::Kimi | ProviderKind::OhMyPi | ProviderKind::Pi => Vec::new(),
+        // `agy models` lists the account's catalog; see `antigravity_session`.
+        ProviderKind::Antigravity => Vec::new(),
     }
 }
 
@@ -138,6 +140,7 @@ pub fn discover_catalog(
         ProviderKind::OpenCode2 => crate::opencode2_session::discover_catalog(binary),
         ProviderKind::Grok => (discover_grok_models(binary), None),
         ProviderKind::Kimi => (discover_kimi_models(binary), None),
+        ProviderKind::Antigravity => (crate::antigravity_session::discover_models(binary), None),
         ProviderKind::Pi => (discover_pi_models(binary, PiDialect::Pi), None),
         ProviderKind::OhMyPi => (discover_pi_models(binary, PiDialect::OhMyPi), None),
     };

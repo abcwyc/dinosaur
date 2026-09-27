@@ -235,6 +235,20 @@ sidebar.grouping_updated: 更新时间
 sidebar.ordering: 排序
 sidebar.ordering_newest: 最新优先
 sidebar.ordering_oldest: 最旧优先
+sidebar.agent_history: Agent 历史
+sidebar.agent_history_files: 读取本地文件
+sidebar.agent_history_processes: 需启动 agent 读取（每 10 分钟刷新）
+sidebar.pin_project: 置顶项目
+sidebar.unpin_project: 取消置顶
+sidebar.reset_project_name: 恢复默认名称
+sidebar.show: 显示
+sidebar.show_branch: 分支
+sidebar.show_pull_request: Pull request
+sidebar.show_harness: Agent
+sidebar.pr_open: 进行中
+sidebar.pr_draft: 草稿
+sidebar.pr_merged: 已合并
+sidebar.pr_closed: 已关闭
 sidebar.show_more: 显示更多
 sidebar.yesterday: 昨天
 sidebar.this_week: 本周
@@ -243,9 +257,9 @@ sidebar.this_year: 今年
 sidebar.more: 更早
 sidebar.working: 工作中 · %{elapsed}
 sidebar.just_now: 刚刚
-sidebar.minutes_ago: "%{count} 分钟前"
-sidebar.hours_ago: "%{count} 小时前"
-sidebar.days_ago: "%{count} 天前"
+sidebar.minutes_ago: "%{count}分钟"
+sidebar.hours_ago: "%{count}小时"
+sidebar.days_ago: "%{count}天"
 sidebar.unknown_project: 未知项目
 sidebar.close: 关闭侧边栏
 sidebar.hide: 隐藏侧边栏
@@ -665,6 +679,8 @@ errors.provider_transport_write: "%{provider} 通信写入失败：%{error}"
 errors.provider_transport_write_short: "%{provider} 通信写入失败"
 errors.provider_transport_read: "%{provider} 通信读取失败：%{error}"
 errors.provider_invalid_json: "%{provider} 发来了无效的 JSON：%{error}"
+errors.antigravity_full_access_only: "Antigravity CLI 仅支持「完全访问」模式：它的流式接口无法请求审批。"
+errors.provider_turn_failed: "%{provider} 未能完成本轮"
 errors.provider_exited: "%{provider} 已退出（%{status}）"
 errors.provider_rpc_exited: "%{provider} RPC 已退出（%{status}）"
 errors.read_provider_exit_status: "无法读取 %{provider} 的退出状态：%{error}"

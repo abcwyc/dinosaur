@@ -247,6 +247,20 @@ sidebar.grouping_updated: 更新日
 sidebar.ordering: 並び順
 sidebar.ordering_newest: 新しい順
 sidebar.ordering_oldest: 古い順
+sidebar.agent_history: エージェント履歴
+sidebar.agent_history_files: ローカルファイルから読み込み
+sidebar.agent_history_processes: エージェントを起動して取得（10 分ごとに更新）
+sidebar.pin_project: プロジェクトをピン留め
+sidebar.unpin_project: ピン留めを解除
+sidebar.reset_project_name: 名前をリセット
+sidebar.show: 表示
+sidebar.show_branch: ブランチ
+sidebar.show_pull_request: プルリクエスト
+sidebar.show_harness: エージェント
+sidebar.pr_open: オープン
+sidebar.pr_draft: ドラフト
+sidebar.pr_merged: マージ済み
+sidebar.pr_closed: クローズ
 sidebar.show_more: もっと見る
 sidebar.yesterday: 昨日
 sidebar.this_week: 今週
@@ -700,6 +714,8 @@ errors.provider_transport_write: "%{provider} の通信への書き込みに失�
 errors.provider_transport_write_short: "%{provider} の通信への書き込みに失敗しました"
 errors.provider_transport_read: "%{provider} の通信の読み込みに失敗しました：%{error}"
 errors.provider_invalid_json: "%{provider} から無効な JSON が送信されました：%{error}"
+errors.antigravity_full_access_only: "Antigravity CLI は「フルアクセス」でのみ動作します。ストリーミングモードでは承認を求められません。"
+errors.provider_turn_failed: "%{provider} はこのターンを完了できませんでした"
 errors.provider_exited: "%{provider} が %{status} で終了しました"
 errors.provider_rpc_exited: "%{provider} RPC が %{status} で終了しました"
 errors.read_provider_exit_status: "%{provider} の終了ステータスを読み取れませんでした：%{error}"

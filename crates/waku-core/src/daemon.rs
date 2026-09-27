@@ -54,6 +54,8 @@ pub struct WakuBackend {
     composer_drafts: ComposerDraftStore,
     attachments: AttachmentStore,
     usage_scan_cache: Mutex<crate::usage_history::ScanCache>,
+    native_index: crate::native_index::NativeIndex,
+    pull_requests: crate::pull_requests::PullRequestCache,
     checkpoint_capture_locks: Mutex<HashMap<(PathBuf, Uuid, usize), Arc<Mutex<()>>>>,
     usage_rates_dir: std::path::PathBuf,
     default_cwd: std::path::PathBuf,
@@ -78,6 +80,7 @@ impl WakuBackend {
             .parent()
             .unwrap_or_else(|| std::path::Path::new("."))
             .to_owned();
+        let native_index = crate::native_index::NativeIndex::new(task_store.path().parent());
         Ok(Self {
             sessions: Mutex::new(HashMap::new()),
             terminals: Mutex::new(HashMap::new()),
@@ -90,6 +93,8 @@ impl WakuBackend {
             composer_drafts,
             attachments,
             usage_scan_cache: Mutex::new(HashMap::new()),
+            native_index,
+            pull_requests: Default::default(),
             checkpoint_capture_locks: Mutex::new(HashMap::new()),
             usage_rates_dir,
             default_cwd: std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
@@ -536,6 +541,9 @@ impl Backend for WakuBackend {
                     ProviderKind::OhMyPi | ProviderKind::Pi => {
                         crate::pi_session::list_provider_sessions(provider, limit)?
                     }
+                    ProviderKind::Antigravity => {
+                        crate::antigravity_session::list_provider_sessions(limit)?
+                    }
                 };
                 sessions.sort_by(|a, b| {
                     b.updated_at
@@ -557,11 +565,28 @@ impl Backend for WakuBackend {
                 sessions.truncate(limit);
                 Ok(ResponsePayload::ProviderSessions { sessions })
             }
+            Command::ListNativeSessions { providers, limit } => {
+                let disabled = self.settings.get().disabled_providers;
+                let providers = providers
+                    .into_iter()
+                    .filter(|provider| !disabled.contains(provider))
+                    .collect::<Vec<_>>();
+                Ok(ResponsePayload::NativeSessions {
+                    sessions: self.native_index.list(&providers, limit.min(1_000)),
+                })
+            }
+            Command::LookupPullRequests { targets } => Ok(ResponsePayload::PullRequests {
+                pull_requests: self.pull_requests.lookup(targets),
+            }),
             Command::LoadProviderSession { cursor, cwd } => {
                 // Preserve every native turn shell for exact provider turn
                 // numbering, but bound imported display text to recent turns.
                 const VISIBLE_TURN_LIMIT: usize = 100;
                 let history = match &cursor {
+                    ProviderResumeCursor::Antigravity { conversation_id } => {
+                        self.provider_binary(ProviderKind::Antigravity)?;
+                        crate::antigravity_session::provider_session_history(conversation_id)
+                    }
                     ProviderResumeCursor::Amp { thread_id, .. } => {
                         let binary = self.provider_binary(ProviderKind::Amp)?;
                         crate::amp_session::provider_session_history(
@@ -1296,7 +1321,7 @@ impl WakuBackend {
             }
             // Unreachable through the UI, which hides branching for providers
             // that answer `supports_conversation_fork` with false.
-            ProviderKind::Fx | ProviderKind::Kimi => {
+            ProviderKind::Antigravity | ProviderKind::Fx | ProviderKind::Kimi => {
                 bail!(
                     "{} cannot branch a conversation at a turn",
                     source.provider.display_name()
@@ -1523,7 +1548,7 @@ impl WakuBackend {
             )),
             // Unreachable through the UI, which hides rewinding for providers
             // that answer `supports_conversation_rollback` with false.
-            ProviderKind::Fx | ProviderKind::Kimi => {
+            ProviderKind::Antigravity | ProviderKind::Fx | ProviderKind::Kimi => {
                 bail!(
                     "{} cannot rewind a conversation to a turn",
                     source.provider.display_name()
@@ -1844,6 +1869,8 @@ fn handle_driver_command(
         | Command::HydrateSession { .. }
         | Command::SearchSessionMessages { .. }
         | Command::ListProviderSessions { .. }
+        | Command::ListNativeSessions { .. }
+        | Command::LookupPullRequests { .. }
         | Command::LoadProviderSession { .. }
         | Command::LoadComposerDrafts
         | Command::SaveComposerDrafts { .. }

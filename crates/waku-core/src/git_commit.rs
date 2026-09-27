@@ -342,6 +342,22 @@ fn agent_arguments(
             }
             return args;
         }
+        // Antigravity takes the prompt as `--print`'s value; plan mode keeps it
+        // from editing while it writes the subject.
+        ProviderKind::Antigravity => {
+            push(&mut args, "--print");
+            push(&mut args, prompt);
+            push(&mut args, "--output-format");
+            push(&mut args, "text");
+            push(&mut args, "--mode");
+            push(&mut args, "plan");
+            push(&mut args, "--disable-slash-commands");
+            if let Some(model) = model {
+                push(&mut args, "--model");
+                push(&mut args, model);
+            }
+            return args;
+        }
         // Kimi carries the prompt as `--prompt`'s value rather than a trailing
         // positional, so it returns early. It has no tool or session switches
         // to turn off; the commit prompt is what forbids tool use.
@@ -818,6 +834,11 @@ mod tests {
                     assert!(has(&args, "--no-tools"));
                     assert!(has(&args, "--no-rules"));
                     assert!(has_pair(&args, "--thinking", "low"));
+                }
+                ProviderKind::Antigravity => {
+                    assert!(has_pair(&args, "--print", prompt));
+                    assert!(has_pair(&args, "--mode", "plan"));
+                    assert!(has_pair(&args, "--model", "model"));
                 }
                 ProviderKind::Kimi => {
                     assert!(has_pair(&args, "--prompt", prompt));

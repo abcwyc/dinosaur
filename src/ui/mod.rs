@@ -164,6 +164,7 @@ pub fn provider_color(theme: &Theme, provider: ProviderKind) -> Hsla {
         ProviderKind::Amp => rgb(0xF34E3F).into(),
         ProviderKind::Claude => rgb(0xD97757).into(),
         ProviderKind::DeepSeek => rgb(0x4D6BFE).into(),
+        ProviderKind::Antigravity => rgb(0x3186FF).into(),
         ProviderKind::Codex
         | ProviderKind::Cursor
         | ProviderKind::Fx
@@ -186,6 +187,7 @@ pub fn provider_color(theme: &Theme, provider: ProviderKind) -> Hsla {
 pub fn provider_icon(provider: ProviderKind) -> &'static str {
     match provider {
         ProviderKind::Amp => "icons/provider-amp.svg",
+        ProviderKind::Antigravity => "icons/provider-antigravity.svg",
         ProviderKind::Claude => "icons/provider-claude.svg",
         ProviderKind::Codex => "icons/provider-openai.svg",
         ProviderKind::Cursor => "icons/provider-cursor.svg",

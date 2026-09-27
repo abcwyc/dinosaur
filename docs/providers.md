@@ -21,6 +21,7 @@ session that spans the whole conversation**:
 | Pi RPC mode (NDJSON request/response over stdio) | [driver/pi.rs](../crates/waku-core/src/driver/pi.rs) | Pi, Oh My Pi |
 | Claude streaming-input session (NDJSON over stdio) | [driver/claude.rs](../crates/waku-core/src/driver/claude.rs) | Claude Code |
 | Amp streaming-JSON session (NDJSON over stdio) | [driver/amp.rs](../crates/waku-core/src/driver/amp.rs) | Amp |
+| Antigravity streaming-JSON session (NDJSON over stdio) | [driver/antigravity.rs](../crates/waku-core/src/driver/antigravity.rs) | Antigravity CLI |
 | Harness client API (typed HTTP + downlink streams) | [driver/deepseek.rs](../crates/waku-core/src/driver/deepseek.rs) | DeepSeek Harness |
 
 DeepSeek Harness has no dedicated section below yet; its driver's module
@@ -149,20 +150,20 @@ OpenCode server itself, whose driver kills it explicitly on drop.
 
 ## At a glance
 
-| | Codex CLI | Pi | Oh My Pi | Claude Code | Amp | Cursor CLI | Fx | OpenCode | Grok Build | Kimi Code |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Binary | `codex` | `pi` | `omp` | `claude` | `amp` | `cursor-agent` | `fx` | `opencode` | `grok` | `kimi` |
-| Wire protocol | JSON-RPC over stdio | NDJSON RPC over stdio | NDJSON RPC over stdio | stream-json over stdio | stream-json over stdio | ACP over stdio | ACP over stdio | HTTP + SSE | ACP over stdio | ACP over stdio |
-| Process spans the whole session | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
-| Process spawned per turn | no | no | no | no | no | no | no | no | no | no |
-| Bidirectional | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
-| Reasoning stream | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
-| Interactive approvals | yes | no | no (has them; Dinosaur runs `--yolo`) | yes | no | yes | yes | yes | yes | yes |
-| Mid-turn steering | yes | yes | yes | yes | yes | yes | **no** | yes | yes | yes (transport) |
-| Model discovery | yes | yes | yes | no (fixed) | no (modes) | yes | yes | yes | yes | yes |
-| Computer Use | yes | yes | no (ships its own) | no | no | no | no | yes | yes | no |
-| Restricted to Full access | no | yes | yes | no | yes | no | no | no | no | no |
-| Rewind and branch at a turn | yes | yes | yes | yes | yes | yes | **no** | yes | yes | **no** |
+| | Codex CLI | Pi | Oh My Pi | Claude Code | Amp | Cursor CLI | Fx | OpenCode | Grok Build | Kimi Code | Antigravity CLI |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Binary | `codex` | `pi` | `omp` | `claude` | `amp` | `cursor-agent` | `fx` | `opencode` | `grok` | `kimi` | `agy` |
+| Wire protocol | JSON-RPC over stdio | NDJSON RPC over stdio | NDJSON RPC over stdio | stream-json over stdio | stream-json over stdio | ACP over stdio | ACP over stdio | HTTP + SSE | ACP over stdio | ACP over stdio | stream-json over stdio |
+| Process spans the whole session | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+| Process spawned per turn | no | no | no | no | no | no | no | no | no | no | no |
+| Bidirectional | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+| Reasoning stream | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+| Interactive approvals | yes | no | no (has them; Dinosaur runs `--yolo`) | yes | no | yes | yes | yes | yes | yes | no |
+| Mid-turn steering | yes | yes | yes | yes | yes | yes | **no** | yes | yes | yes (transport) | **no** |
+| Model discovery | yes | yes | yes | no (fixed) | no (modes) | yes | yes | yes | yes | yes | yes |
+| Computer Use | yes | yes | no (ships its own) | no | no | no | no | yes | yes | no | no |
+| Restricted to Full access | no | yes | yes | no | yes | no | no | no | no | no | yes |
+| Rewind and branch at a turn | yes | yes | yes | yes | yes | yes | **no** | yes | yes | **no** | **no** |
 
 Kimi Code's steering is the transport's, not a probed policy: the ACP driver
 sends the second `session/prompt` for every agent it drives, but Kimi's
@@ -455,6 +456,48 @@ same account- and configuration-aware list used by `/model`, including custom
 routes resolved through CC Switch. Dinosaur probes it in the background and caches
 the last successful catalog; the curated list is only the startup/failure
 fallback ([model_catalog.rs](../crates/waku-core/src/model_catalog.rs)).
+
+---
+
+## Antigravity CLI
+
+**Launch** — `agy --input-format stream-json --output-format stream-json
+--dangerously-skip-permissions --print-timeout 0`, plus `--model`, `--effort`
+(`low|medium|high`), and `--conversation <id>` to resume
+([driver/antigravity.rs](../crates/waku-core/src/driver/antigravity.rs)).
+**Neither format flag is in `agy --help`**; Google ships no ACP mode yet
+(google-antigravity/antigravity-cli#31), so the wire shape follows the
+community ACP bridges built on this mode, not official documentation.
+
+**Lifetime** — long-lived: one process reads one NDJSON user message per line
+and runs a turn for each.
+
+**Per turn** — write `{"event":"user","message":{"role":"user","content":[{"type":"text","text":…}]}}`.
+
+**Inbound stream** — every event carries an `event` tag.
+
+| Event | Becomes |
+| --- | --- |
+| `init` (`conversation_id`) | `Connected` with the resume cursor |
+| `step_update` · `agent_response` (`text_delta`, `thought_delta`, `usage.input_tokens`) | `TextDelta`, `ReasoningDelta`, `UsageUpdated` |
+| `step_update` · `tool` (`tool_name`, `tool_info.parameters/output/error`, `state` ACTIVE/DONE/ERROR) | `RichActivity`, keyed by turn and `step_index` (agy reuses step indexes across turns) |
+| `step_update` · `error_message` | kept as the failure summary while agy retries |
+| `result` (`status`, `response`, `error`, `usage`) | `TurnFinished`; `response` is emitted only when nothing streamed |
+
+**Approvals** — none on the stream, so Dinosaur runs agy only in Full access.
+
+**Cancel** — no interrupt: Stop sends SIGINT and the runtime is dropped; the
+next prompt resumes with `--conversation`, like Amp.
+
+**History** — `~/.gemini/antigravity-cli/conversation_summaries.db` (SQLite)
+lists conversations with title, workspace URIs and timestamps
+([antigravity_session.rs](../crates/waku-core/src/antigravity_session.rs)).
+Transcripts are protobuf blobs without a published schema, so an import opens
+with an empty transcript while agy keeps the context.
+
+**Models** — `agy models`, one `id<TAB>name` line each.
+
+**Not supported** — steering, rewind and branch.
 
 ---
 

@@ -19,6 +19,15 @@ the original feature bullet instead of adding separate entries for them.
 
 ## [unreleased]
 
+## [0.1.1]
+
+- Show every agent's native session history in the sidebar, grouped by project
+- Single-line sidebar rows with branch, pull request, and agent badges
+- Add Antigravity CLI as a provider
+- The macOS build is not notarized yet: on first launch, right-click the app
+  and choose **Open**, or run
+  `xattr -dr com.apple.quarantine /Applications/Dinosaur.app`
+
 ## [0.1.0]
 
 - First release as Dinosaur, with a new name and a pixel dinosaur app icon

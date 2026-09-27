@@ -19,6 +19,7 @@ macro_rules! tr {
 
 pub mod acp_session;
 pub mod amp_session;
+pub mod antigravity_session;
 pub mod attachments;
 pub mod blob_store;
 pub mod checkpoint;
@@ -43,6 +44,7 @@ pub mod identity;
 pub mod kimi_session;
 pub mod model;
 pub mod model_catalog;
+pub mod native_index;
 pub mod opencode2_api;
 pub mod opencode2_service;
 pub mod opencode2_session;
@@ -51,6 +53,7 @@ pub mod opencode_session;
 pub mod persistence;
 pub mod pi_session;
 pub mod projectless;
+pub mod pull_requests;
 pub mod settings;
 pub mod skills;
 mod slash_command_catalog;

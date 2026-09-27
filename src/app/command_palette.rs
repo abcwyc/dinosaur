@@ -161,6 +161,8 @@ enum PaletteAction {
     ToggleRightPanel,
     OpenSettings(SettingsPage),
     SelectTask(Uuid),
+    /// A provider-native conversation from the sidebar catalog, imported on open.
+    OpenNativeSession(Uuid),
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -936,6 +938,31 @@ impl Waku {
                     recency: session.updated_at,
                 }
             })
+            .chain(self.native_palette_entries().into_iter().map(|native| {
+                CommandPaletteItem {
+                    section: PaletteSection::Tasks,
+                    search_text: format!(
+                        "{} {} {} {} {} history",
+                        native.title,
+                        native.project,
+                        native.path,
+                        native.provider.short_name(),
+                        native.provider.display_name(),
+                    ),
+                    detail: Some(format!(
+                        "{} · {}",
+                        native.project,
+                        native.provider.display_name()
+                    )),
+                    label: native.title,
+                    icon: PaletteIcon::Provider(native.provider),
+                    shortcut: None,
+                    action: PaletteAction::OpenNativeSession(native.id),
+                    content_match: None,
+                    order: usize::MAX,
+                    recency: native.timestamp,
+                }
+            }))
             .collect()
     }
 
@@ -1374,7 +1401,7 @@ impl Waku {
         .detach();
     }
 
-    fn import_provider_session(
+    pub(super) fn import_provider_session(
         &mut self,
         summary: ProviderSessionSummary,
         history: ProviderSessionHistory,
@@ -1595,6 +1622,10 @@ impl Waku {
                 self.select_session(session_id, cx);
                 let focus = self.composer_focus(cx);
                 window.focus(&focus, cx);
+            }
+            PaletteAction::OpenNativeSession(id) => {
+                self.settings_page = None;
+                self.open_native_session(id, window, cx);
             }
             PaletteAction::ChooseModel | PaletteAction::ToggleUsage => {
                 // These popovers are rendered by the composer. If the command

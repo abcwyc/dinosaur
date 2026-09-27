@@ -191,6 +191,17 @@ pub enum Command {
         provider: ProviderKind,
         limit: usize,
     },
+    /// List provider-native conversations from the daemon's incremental index,
+    /// newest first, at most `limit` per provider.
+    ListNativeSessions {
+        providers: Vec<ProviderKind>,
+        limit: usize,
+    },
+    /// Look up the pull request for each branch, via the GitHub CLI on the
+    /// daemon host. Branches without one are omitted from the response.
+    LookupPullRequests {
+        targets: Vec<crate::native_session::PullRequestTarget>,
+    },
     /// Load the user-visible transcript for one provider-native conversation.
     LoadProviderSession {
         cursor: ProviderResumeCursor,
@@ -424,6 +435,12 @@ pub enum ResponsePayload {
     },
     ProviderSessions {
         sessions: Vec<ProviderSessionSummary>,
+    },
+    NativeSessions {
+        sessions: Vec<crate::native_session::NativeSessionSummary>,
+    },
+    PullRequests {
+        pull_requests: Vec<crate::native_session::PullRequestInfo>,
     },
     ProviderSessionHistory {
         history: ProviderSessionHistory,
