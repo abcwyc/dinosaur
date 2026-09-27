@@ -16,6 +16,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{BufRead, BufReader, Read as _};
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -25,6 +26,13 @@ use crate::model::{ProviderKind, ProviderResumeCursor, ProviderSessionSummary};
 use waku_protocol::native_session::NativeSessionSummary;
 
 const CACHE_FILE: &str = "native-index.json";
+/// Minimum spacing between cache writes while sessions keep changing.
+const PERSIST_INTERVAL: Duration = Duration::from_secs(60);
+/// Pi files above this are summarized from their head and tail instead of a
+/// full parse: an active session can be hundreds of megabytes and changes on
+/// every refresh.
+const PI_FULL_PARSE_LIMIT: u64 = 4 * 1024 * 1024;
+const PI_READ_BUFFER: usize = 256 * 1024;
 const CACHE_VERSION: u32 = 1;
 /// Codex puts its session metadata and first prompt at the front of a rollout.
 const CODEX_HEAD_BYTES: u64 = 2 * 1024 * 1024;
@@ -59,6 +67,9 @@ struct CacheFile {
 pub struct NativeIndex {
     cache_path: Option<PathBuf>,
     files: Mutex<HashMap<PathBuf, CachedFile>>,
+    /// The cache changed since it was last written, and when that was. Active
+    /// sessions change every refresh, so writes are coalesced.
+    persist_state: Mutex<(bool, Option<Instant>)>,
 }
 
 impl NativeIndex {
@@ -74,6 +85,7 @@ impl NativeIndex {
         Self {
             cache_path,
             files: Mutex::new(files),
+            persist_state: Mutex::new((false, None)),
         }
     }
 
@@ -115,7 +127,7 @@ impl NativeIndex {
                     &mut changed,
                     provider,
                     pi_files(provider),
-                    |path| crate::pi_session::summary_for_file(provider, path).map(native),
+                    |path| pi_summary(provider, path),
                 ),
                 ProviderKind::Grok => crate::grok_session::list_provider_sessions(limit)
                     .unwrap_or_default()
@@ -139,12 +151,19 @@ impl NativeIndex {
             };
             let mut seen = HashSet::new();
             listed.retain(|session| seen.insert(session.summary.cursor.native_id().to_owned()));
-            listed.sort_by(|a, b| b.summary.updated_at.cmp(&a.summary.updated_at));
+            listed.sort_by_key(|session| std::cmp::Reverse(session.summary.updated_at));
             listed.truncate(limit);
             sessions.extend(listed);
         }
-        if changed {
+        let mut persist_state = self.persist_state.lock();
+        persist_state.0 |= changed;
+        if persist_state.0
+            && persist_state
+                .1
+                .is_none_or(|written| written.elapsed() >= PERSIST_INTERVAL)
+        {
             self.persist(&files);
+            *persist_state = (false, Some(Instant::now()));
         }
         sessions
     }
@@ -292,9 +311,13 @@ fn claude_files() -> Vec<PathBuf> {
 }
 
 fn claude_summary(path: &Path) -> Option<NativeSessionSummary> {
-    crate::claude_session::session_summary_from_path(path)
-        .ok()
-        .map(native)
+    // Checking that a protected folder still exists would ask the user for
+    // access just because the sidebar refreshed; assume it does.
+    crate::claude_session::session_summary_from_path_with(path, |cwd| {
+        is_privacy_protected(cwd) || cwd.is_dir()
+    })
+    .ok()
+    .map(native)
 }
 
 // ── Codex ───────────────────────────────────────────────────────────────────
@@ -451,6 +474,168 @@ fn codex_summary(path: &Path) -> Option<NativeSessionSummary> {
 
 // ── Pi and Oh My Pi ─────────────────────────────────────────────────────────
 
+fn pi_summary(provider: ProviderKind, path: &Path) -> Option<NativeSessionSummary> {
+    let len = fs::metadata(path).ok()?.len();
+    if len <= PI_FULL_PARSE_LIMIT {
+        return crate::pi_session::summary_for_file(provider, path).map(native);
+    }
+    pi_summary_streamed(provider, path).map(native)
+}
+
+fn pi_seconds(value: Option<&Value>) -> u64 {
+    let Some(value) = value else {
+        return 0;
+    };
+    value
+        .as_u64()
+        .map(|value| {
+            if value > 100_000_000_000 {
+                value / 1000
+            } else {
+                value
+            }
+        })
+        .or_else(|| {
+            value
+                .as_str()
+                .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+                .and_then(|value| u64::try_from(value.timestamp()).ok())
+        })
+        .unwrap_or_default()
+}
+
+fn pi_text(value: &Value) -> Option<String> {
+    match value {
+        Value::String(text) => Some(text.clone()),
+        Value::Array(parts) => Some(
+            parts
+                .iter()
+                .filter(|part| part.get("type").and_then(Value::as_str) == Some("text"))
+                .filter_map(|part| part.get("text").and_then(Value::as_str))
+                .collect::<Vec<_>>()
+                .join("\n\n"),
+        ),
+        _ => None,
+    }
+    .filter(|text| !text.trim().is_empty())
+}
+
+/// Summary of a large Pi session in one sequential read that JSON-parses only
+/// the lines it needs: the header, renames (which can sit anywhere in the
+/// file), and messages up to the first user prompt. Every Pi record starts
+/// with its `{"type":"…"` tag, so the rest are skipped by their prefix. Unlike
+/// the full parse this takes the first prompt in file order rather than on the
+/// active branch, which only differs for sessions branched before their first
+/// reply.
+fn pi_summary_streamed(provider: ProviderKind, path: &Path) -> Option<ProviderSessionSummary> {
+    const WANTED: [&[u8]; 4] = [
+        b"{\"type\":\"session\"",
+        b"{\"type\":\"session_info\"",
+        b"{\"type\":\"title\"",
+        b"{\"type\":\"title_change\"",
+    ];
+    const MESSAGE: &[u8] = b"{\"type\":\"message\"";
+
+    let file = fs::File::open(path).ok()?;
+    let modified = file
+        .metadata()
+        .ok()
+        .map(|metadata| modified_seconds(&metadata))
+        .unwrap_or_default();
+    let mut reader = BufReader::with_capacity(PI_READ_BUFFER, file);
+    let mut line = Vec::new();
+
+    let mut session_id = None;
+    let mut cwd = None;
+    let mut created_at = 0;
+    let mut updated_at = modified;
+    let mut title = None;
+    let mut first_prompt = None;
+    loop {
+        line.clear();
+        match reader.read_until(b'\n', &mut line) {
+            Ok(0) | Err(_) => break,
+            Ok(_) => {}
+        }
+        let wanted = WANTED.iter().any(|prefix| line.starts_with(prefix));
+        let prompt_candidate = first_prompt.is_none() && line.starts_with(MESSAGE);
+        if !wanted && !prompt_candidate {
+            continue;
+        }
+        let Ok(value) = serde_json::from_slice::<Value>(&line) else {
+            continue;
+        };
+        match value
+            .get("type")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+        {
+            "session" if session_id.is_none() => {
+                session_id = value.get("id").and_then(Value::as_str).map(str::to_owned);
+                cwd = value.get("cwd").and_then(Value::as_str).map(PathBuf::from);
+                created_at = pi_seconds(value.get("timestamp"));
+                if let Some(value) = value.get("title").and_then(Value::as_str) {
+                    title = Some(value.trim().to_owned());
+                }
+            }
+            "title" | "title_change" => {
+                if let Some(value) = value.get("title").and_then(Value::as_str) {
+                    title = Some(value.trim().to_owned());
+                }
+                updated_at = updated_at.max(pi_seconds(value.get("updatedAt")));
+            }
+            "session_info" => {
+                if let Some(value) = value.get("name").and_then(Value::as_str) {
+                    title = Some(value.trim().to_owned());
+                }
+            }
+            "message" if value.pointer("/message/role").and_then(Value::as_str) == Some("user") => {
+                first_prompt = value.pointer("/message/content").and_then(pi_text);
+            }
+            _ => {}
+        }
+    }
+    let session_id = session_id.filter(|id| !id.is_empty())?;
+    let cwd = cwd.filter(|cwd| cwd.is_absolute())?;
+    let title = title.filter(|title| !title.is_empty()).or_else(|| {
+        first_prompt.map(|prompt| {
+            let title = prompt
+                .split_whitespace()
+                .take(8)
+                .collect::<Vec<_>>()
+                .join(" ");
+            if title.chars().count() > 58 {
+                format!("{}…", title.chars().take(57).collect::<String>())
+            } else {
+                title
+            }
+        })
+    })?;
+    let cursor = match provider {
+        ProviderKind::Pi => ProviderResumeCursor::Pi {
+            session_id,
+            session_file: Some(path.to_path_buf()),
+        },
+        ProviderKind::OhMyPi => ProviderResumeCursor::OhMyPi {
+            session_id,
+            session_file: Some(path.to_path_buf()),
+        },
+        _ => return None,
+    };
+    let created_at = if created_at == 0 {
+        updated_at
+    } else {
+        created_at
+    };
+    Some(ProviderSessionSummary {
+        cursor,
+        title,
+        cwd,
+        created_at,
+        updated_at: updated_at.max(created_at),
+    })
+}
+
 fn pi_files(provider: ProviderKind) -> Vec<PathBuf> {
     crate::pi_session::session_roots(provider)
         .unwrap_or_default()
@@ -527,6 +712,40 @@ mod tests {
         assert_eq!(project, main);
         assert_eq!(branch.as_deref(), Some("feature/login"));
         assert!(worktree_origin(&main).is_none());
+    }
+
+    #[test]
+    fn large_pi_sessions_find_renames_anywhere_without_a_full_parse() {
+        let root = temp_root();
+        let path = root.join("large.jsonl");
+        let mut contents = String::from(
+            "{\"type\":\"session\",\"id\":\"s1\",\"cwd\":\"/tmp/proj\",\"timestamp\":\"2026-09-01T00:00:00Z\"}\n\
+             {\"type\":\"message\",\"id\":\"m1\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"fix the build\"}]}}\n",
+        );
+        let filler = format!(
+            "{{\"type\":\"message\",\"id\":\"x\",\"message\":{{\"role\":\"assistant\",\"content\":\"{}\"}}}}\n",
+            "a".repeat(1000)
+        );
+        while contents.len() < 3 * 1024 * 1024 {
+            contents.push_str(&filler);
+        }
+        let middle = contents[contents.len() / 2..].find('\n').unwrap() + contents.len() / 2 + 1;
+        let tail = contents.split_off(middle);
+        contents.push_str("{\"type\":\"session_info\",\"name\":\"Renamed late\"}\n");
+        contents.push_str(&tail);
+        write(&path, &contents);
+        let summary = pi_summary_streamed(ProviderKind::Pi, &path).unwrap();
+        assert_eq!(summary.cursor.native_id(), "s1");
+        assert_eq!(summary.title, "Renamed late");
+        assert_eq!(summary.cwd, PathBuf::from("/tmp/proj"));
+
+        let untitled = contents.replace(
+            "{\"type\":\"session_info\",\"name\":\"Renamed late\"}\n",
+            "",
+        );
+        write(&path, &untitled);
+        let summary = pi_summary_streamed(ProviderKind::Pi, &path).unwrap();
+        assert_eq!(summary.title, "fix the build");
     }
 
     #[test]

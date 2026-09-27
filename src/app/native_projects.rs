@@ -37,11 +37,43 @@ pub(super) const PROCESS_PROVIDERS: [ProviderKind; 6] = [
     ProviderKind::Fx,
 ];
 
+/// Provider lists tolerate ids this build does not know, so a preference file
+/// written by another version never resets every other setting.
+fn lenient_providers<'de, D>(deserializer: D) -> Result<Vec<ProviderKind>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let values = Vec::<serde_json::Value>::deserialize(deserializer)?;
+    Ok(values
+        .into_iter()
+        .filter_map(|value| serde_json::from_value(value).ok())
+        .collect())
+}
+
+fn lenient_legacy_providers<'de, D>(deserializer: D) -> Result<Option<Vec<ProviderKind>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    lenient_providers(deserializer).map(Some)
+}
+
 #[derive(Default, Deserialize, Serialize)]
 pub(super) struct NativePrefs {
-    /// Providers whose history is listed; `None` means the indexed defaults.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Earlier format: the full enabled list. Read once and migrated, because
+    /// an explicit list would hide every provider added later.
+    #[serde(
+        default,
+        skip_serializing,
+        deserialize_with = "lenient_legacy_providers"
+    )]
     providers: Option<Vec<ProviderKind>>,
+    /// File-indexed providers the user turned off; the rest are listed, so a
+    /// newly supported provider shows up without a visit to the menu.
+    #[serde(default, deserialize_with = "lenient_providers")]
+    disabled_providers: Vec<ProviderKind>,
+    /// Process-backed providers the user turned on; they start agents to list.
+    #[serde(default, deserialize_with = "lenient_providers")]
+    enabled_process_providers: Vec<ProviderKind>,
     #[serde(default)]
     pinned_projects: Vec<PathBuf>,
     #[serde(default)]
@@ -57,7 +89,22 @@ impl NativePrefs {
     }
 
     pub(super) fn load() -> Self {
-        fs_read_json(&Self::path()).unwrap_or_default()
+        let mut prefs: Self = fs_read_json(&Self::path()).unwrap_or_default();
+        prefs.migrate();
+        prefs
+    }
+
+    fn migrate(&mut self) {
+        if let Some(enabled) = self.providers.take() {
+            self.disabled_providers = INDEXED_PROVIDERS
+                .into_iter()
+                .filter(|provider| !enabled.contains(provider))
+                .collect();
+            self.enabled_process_providers = PROCESS_PROVIDERS
+                .into_iter()
+                .filter(|provider| enabled.contains(provider))
+                .collect();
+        }
     }
 
     pub(super) fn save(&self) {
@@ -71,9 +118,10 @@ impl NativePrefs {
     }
 
     pub(super) fn is_enabled(&self, provider: ProviderKind) -> bool {
-        match &self.providers {
-            Some(providers) => providers.contains(&provider),
-            None => INDEXED_PROVIDERS.contains(&provider),
+        if INDEXED_PROVIDERS.contains(&provider) {
+            !self.disabled_providers.contains(&provider)
+        } else {
+            self.enabled_process_providers.contains(&provider)
         }
     }
 
@@ -86,16 +134,16 @@ impl NativePrefs {
     }
 
     fn toggle(&mut self, provider: ProviderKind) {
-        let mut providers = self
-            .providers
-            .clone()
-            .unwrap_or_else(|| INDEXED_PROVIDERS.to_vec());
-        if let Some(index) = providers.iter().position(|value| *value == provider) {
-            providers.remove(index);
+        let list = if INDEXED_PROVIDERS.contains(&provider) {
+            &mut self.disabled_providers
         } else {
-            providers.push(provider);
+            &mut self.enabled_process_providers
+        };
+        if let Some(index) = list.iter().position(|value| *value == provider) {
+            list.remove(index);
+        } else {
+            list.push(provider);
         }
-        self.providers = Some(providers);
     }
 }
 
@@ -464,5 +512,23 @@ mod tests {
         assert_eq!(back.pinned_projects, prefs.pinned_projects);
         assert_eq!(back.project_names, prefs.project_names);
         assert!(back.providers.is_none());
+    }
+
+    #[test]
+    fn legacy_enabled_list_migrates_and_new_providers_stay_visible() {
+        let mut prefs: NativePrefs = serde_json::from_str(
+            r#"{"providers":["claude","codex","amp","somethingRemoved"],"disabled_providers":["notAProvider"]}"#,
+        )
+        .unwrap();
+        prefs.migrate();
+        assert!(prefs.is_enabled(ProviderKind::Claude));
+        assert!(prefs.is_enabled(ProviderKind::Amp));
+        assert!(!prefs.is_enabled(ProviderKind::Pi));
+        // Antigravity was not in the old list, yet it is not in the disabled
+        // list either once written in the new format.
+        let json = serde_json::to_string(&prefs).unwrap();
+        assert!(!json.contains("\"providers\""));
+        let fresh: NativePrefs = serde_json::from_str("{}").unwrap();
+        assert!(fresh.is_enabled(ProviderKind::Antigravity));
     }
 }

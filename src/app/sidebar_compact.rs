@@ -31,7 +31,8 @@ impl Default for RowDisplay {
     fn default() -> Self {
         Self {
             branch: true,
-            pull_request: true,
+            // Off until asked for: it calls GitHub for every shown branch.
+            pull_request: false,
             harness: true,
         }
     }
@@ -196,19 +197,23 @@ impl Waku {
 
     /// Look up pull requests for every shown branch in the background.
     pub(super) fn refresh_pull_requests(&mut self, cx: &mut Context<Self>) {
-        if !self.row_display().pull_request || self.native_catalog.pull_requests_pending {
+        if !self.row_display().pull_request {
             return;
         }
         let targets = self.pull_request_targets();
         if targets.is_empty() {
             return;
         }
-        self.native_catalog.pull_requests_pending = true;
+        let Some(generation) = self.native_catalog.pull_requests_pending.begin() else {
+            return;
+        };
         let fetch = self.store.pull_requests(targets);
         cx.spawn(async move |waku, cx| {
             let result = cx.background_executor().spawn(async move { fetch() }).await;
             let _ = waku.update(cx, |waku, cx| {
-                waku.native_catalog.pull_requests_pending = false;
+                if !waku.native_catalog.pull_requests_pending.finish(generation) {
+                    return;
+                }
                 if let Ok(pull_requests) = result {
                     waku.native_catalog.pull_requests = pull_requests
                         .into_iter()
@@ -219,6 +224,20 @@ impl Waku {
             });
         })
         .detach();
+    }
+
+    /// A stable focus handle per pull request, so keyboard focus survives the
+    /// virtualized list re-rendering the row.
+    fn pull_request_focus(&self, url: &str, cx: &mut Context<Self>) -> FocusHandle {
+        use std::hash::{DefaultHasher, Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        ("pull-request", url).hash(&mut hasher);
+        let key = Uuid::from_u64_pair(hasher.finish(), 0x7072);
+        self.native_row_focuses
+            .borrow_mut()
+            .entry(key)
+            .or_insert_with(|| cx.focus_handle())
+            .clone()
     }
 
     fn pull_request_for(&self, cwd: &Path, branch: &str) -> Option<&PullRequestInfo> {
@@ -312,6 +331,8 @@ impl Waku {
             .map(|info| {
                 let color = pull_request_color(info.state, &theme);
                 let url = info.url.clone();
+                let key_url = info.url.clone();
+                let focus = self.pull_request_focus(&info.url, cx);
                 div()
                     .id(SharedString::from(format!(
                         "pr-{}-{}",
@@ -324,7 +345,16 @@ impl Waku {
                     .px(px(3.0))
                     .rounded(px(4.0))
                     .cursor_pointer()
+                    .track_focus(&focus)
+                    .tab_index(0)
+                    .focus_visible(|style| style.border_1().border_color(theme.accent))
                     .hover(|style| style.bg(theme.overlay))
+                    .on_key_down(move |event: &KeyDownEvent, _, cx| {
+                        if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                            cx.stop_propagation();
+                            cx.open_url(&key_url);
+                        }
+                    })
                     .tooltip(Tooltip::text(format!(
                         "#{} · {}",
                         info.number,
@@ -594,10 +624,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn row_display_defaults_on_and_survives_missing_fields() {
+    fn row_display_defaults_and_survives_missing_fields() {
         let display: RowDisplay = serde_json::from_str(r#"{"branch":false}"#).unwrap();
         assert!(!display.branch);
-        assert!(display.pull_request && display.harness);
+        assert!(!display.pull_request && display.harness);
         let mut display = RowDisplay::default();
         display.toggle(RowPart::Harness);
         assert!(!display.get(RowPart::Harness));

@@ -24,11 +24,46 @@ use super::sidebar_compact::{CompactRow, RowStatus};
 use super::*;
 
 const NATIVE_CATALOG_LIMIT: usize = 250;
-/// A warm index refresh is a directory walk and a `stat` per file.
 /// Clock and write-order slack before a native file counts as newer than the
 /// imported copy.
 const NATIVE_SYNC_SLACK_SECONDS: u64 = 30;
+/// A warm index refresh is a directory walk and a `stat` per file.
 pub(super) const NATIVE_CATALOG_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
+/// A request older than this is presumed lost; a new one may start and the
+/// old one's late answer is ignored.
+const REQUEST_STALE_AFTER: Duration = Duration::from_secs(120);
+
+/// One background request slot: at most one in flight, with a generation so a
+/// superseded request's answer is dropped.
+#[derive(Default)]
+pub(super) struct InFlight {
+    generation: u64,
+    since: Option<Instant>,
+}
+
+impl InFlight {
+    /// Start a request unless a recent one is still pending.
+    pub(super) fn begin(&mut self) -> Option<u64> {
+        if self
+            .since
+            .is_some_and(|since| since.elapsed() < REQUEST_STALE_AFTER)
+        {
+            return None;
+        }
+        self.generation = self.generation.wrapping_add(1);
+        self.since = Some(Instant::now());
+        Some(self.generation)
+    }
+
+    /// Settle a request; false when a newer one superseded it.
+    pub(super) fn finish(&mut self, generation: u64) -> bool {
+        if generation != self.generation {
+            return false;
+        }
+        self.since = None;
+        true
+    }
+}
 /// Listing a process-backed provider starts its agent or server, so it is
 /// refreshed rarely.
 const PROCESS_PROVIDER_REFRESH_INTERVAL: Duration = Duration::from_secs(600);
@@ -71,12 +106,16 @@ pub(super) struct NativeCatalog {
     /// Bumped whenever the visible entry set changes; mixed into the sidebar
     /// row fingerprint.
     generation: u64,
-    /// A listing is in flight.
-    pending: bool,
+    /// The native index listing in flight.
+    pending: InFlight,
     /// Native row currently being imported.
     importing: Option<Uuid>,
     /// Imported tasks whose native history is being re-read.
     syncing: HashSet<Uuid>,
+    /// Native timestamp each imported task was last re-read at, so a
+    /// conversation whose history comes back empty is not fetched again until
+    /// it changes.
+    synced: HashMap<Uuid, u64>,
     /// Listings from process-backed providers, refreshed on their own cadence.
     process_entries: HashMap<ProviderKind, Vec<NativeSessionEntry>>,
     process_pending: HashSet<ProviderKind>,
@@ -92,7 +131,7 @@ pub(super) struct NativeCatalog {
         waku_protocol::native_session::PullRequestTarget,
         waku_protocol::native_session::PullRequestInfo,
     >,
-    pub(super) pull_requests_pending: bool,
+    pub(super) pull_requests_pending: InFlight,
 }
 
 impl NativeCatalog {
@@ -268,6 +307,24 @@ fn arrange_project_groups(
     });
 }
 
+/// An imported task whose conversation continued in its own CLI since the
+/// import: loaded, idle, never continued in Waku (it has no Waku transcript
+/// blocks, only imported messages), older than the native conversation, and not
+/// already re-read at this native timestamp.
+fn import_is_stale(
+    session: &AgentSession,
+    native_timestamp: u64,
+    in_use: bool,
+    synced_at: Option<u64>,
+) -> bool {
+    session.detail_loaded
+        && session.transcript_blocks.is_empty()
+        && !session.is_busy()
+        && !in_use
+        && native_timestamp > session.updated_at.saturating_add(NATIVE_SYNC_SLACK_SECONDS)
+        && synced_at.is_none_or(|synced| native_timestamp > synced)
+}
+
 impl Waku {
     /// Refresh the catalog from the daemon's native index in the background,
     /// plus any enabled process-backed provider whose listing is due.
@@ -300,15 +357,19 @@ impl Waku {
             .into_iter()
             .filter(|provider| self.native_catalog.prefs.is_enabled(*provider))
             .collect::<Vec<_>>();
-        if self.native_catalog.pending || providers.is_empty() {
+        if providers.is_empty() {
             return;
         }
-        self.native_catalog.pending = true;
+        let Some(generation) = self.native_catalog.pending.begin() else {
+            return;
+        };
         let fetch = self.store.native_sessions(providers, NATIVE_CATALOG_LIMIT);
         cx.spawn(async move |waku, cx| {
             let result = cx.background_executor().spawn(async move { fetch() }).await;
             let _ = waku.update(cx, |waku, cx| {
-                waku.native_catalog.pending = false;
+                if !waku.native_catalog.pending.finish(generation) {
+                    return;
+                }
                 // A failed listing keeps the last good one: the daemon may be
                 // restarting.
                 if let Ok(sessions) = result {
@@ -349,16 +410,14 @@ impl Waku {
         .detach();
     }
 
-    /// An imported task whose conversation continued in its own CLI since the
-    /// import: loaded, idle, never continued in Waku (it has no Waku transcript
-    /// blocks, only imported messages), and older than the native file.
     fn stale_import(&self, session: &AgentSession, entry: &NativeSessionEntry) -> bool {
-        session.detail_loaded
-            && session.transcript_blocks.is_empty()
-            && !session.is_busy()
-            && !self.runtimes.contains_key(&session.id)
-            && !self.native_catalog.syncing.contains(&session.id)
-            && entry.timestamp() > session.updated_at.saturating_add(NATIVE_SYNC_SLACK_SECONDS)
+        import_is_stale(
+            session,
+            entry.timestamp(),
+            self.runtimes.contains_key(&session.id)
+                || self.native_catalog.syncing.contains(&session.id),
+            self.native_catalog.synced.get(&session.id).copied(),
+        )
     }
 
     /// Re-import native history for imported tasks that went stale.
@@ -393,6 +452,9 @@ impl Waku {
                 let result = cx.background_executor().spawn(async move { fetch() }).await;
                 let _ = waku.update(cx, |waku, cx| {
                     waku.native_catalog.syncing.remove(&session_id);
+                    waku.native_catalog
+                        .synced
+                        .insert(session_id, summary.updated_at);
                     let Ok(history) = result else {
                         return;
                     };
@@ -844,6 +906,25 @@ mod tests {
         );
         assert_eq!(groups[2].1, vec![Uuid::from_u128(21), session]);
         assert_eq!(timestamps[&Uuid::from_u128(20)], 300);
+    }
+
+    #[test]
+    fn stale_imports_are_reread_once_per_native_change() {
+        let mut session = AgentSession::new(Uuid::from_u128(1), ProviderKind::Antigravity);
+        session.detail_loaded = true;
+        session.updated_at = 1_000;
+        assert!(import_is_stale(&session, 2_000, false, None));
+        assert!(
+            !import_is_stale(&session, 1_010, false, None),
+            "within slack"
+        );
+        assert!(
+            !import_is_stale(&session, 2_000, true, None),
+            "running or syncing"
+        );
+        // An empty re-read records the timestamp, so it is not fetched again.
+        assert!(!import_is_stale(&session, 2_000, false, Some(2_000)));
+        assert!(import_is_stale(&session, 2_100, false, Some(2_000)));
     }
 
     #[test]

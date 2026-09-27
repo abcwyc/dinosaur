@@ -13,7 +13,7 @@ upstream merge can be checked point by point.
 | `crates/waku-core/src/native_index.rs` | Daemon: incremental index of provider history files (mtime/size cache in `native-index.json`), Codex rollout parser, Git worktree resolution |
 | `crates/waku-core/src/pull_requests.rs` | Daemon: `gh pr list --head <branch>` lookup, 5-minute cache |
 | `src/app/native_catalog.rs` | Client: polls the index, merges native rows into sidebar groups, imports on click, re-syncs stale imports |
-| `src/app/native_projects.rs` | Client: preferences file `native-catalog.json` (enabled agents, pins, project names, row display), header context menu, "Agent history" menu, palette entries |
+| `src/app/native_projects.rs` | Client: preferences file `native-catalog.json` (disabled file-indexed agents, enabled process-backed agents, pins, project names, row display; migrates the earlier enabled-list format), header context menu, "Agent history" menu, palette entries |
 | `src/app/sidebar_compact.rs` | Client: single-line row layout, "Show" menu, pull request refresh, `render_compact_session_item` |
 | `assets/icons/git-pull-request.svg` | Icon |
 
@@ -75,7 +75,7 @@ shapes.
 | `crates/waku-protocol/src/protocol.rs` | `Command::ListNativeSessions`, `Command::LookupPullRequests`, `ResponsePayload::NativeSessions`, `ResponsePayload::PullRequests` |
 | `crates/waku-core/src/lib.rs` | `pub mod native_index; pub mod pull_requests;` |
 | `crates/waku-core/src/daemon.rs` | Fields `native_index`, `pull_requests`; two command arms; both commands listed in `handle_driver_command`'s wrong-path arm |
-| `crates/waku-core/src/claude_session.rs` | `pub(crate)` on `session_summary_from_path`, `projects_directory`, `provider_session_files` |
+| `crates/waku-core/src/claude_session.rs` | `pub(crate)` on `session_summary_from_path`, `projects_directory`, `provider_session_files`; `session_summary_from_path` delegates to a new `session_summary_from_path_with(path, cwd_available)` so indexing never probes privacy-protected folders |
 | `crates/waku-core/src/pi_session.rs` | `pub(crate)` on `session_roots`, `session_files`; new `summary_for_file` |
 
 ## Upstream APIs this feature depends on

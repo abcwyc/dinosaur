@@ -263,6 +263,16 @@ fn title_from_prompt(prompt: &str) -> Option<String> {
 }
 
 pub(crate) fn session_summary_from_path(path: &Path) -> anyhow::Result<ProviderSessionSummary> {
+    session_summary_from_path_with(path, Path::is_dir)
+}
+
+/// [`session_summary_from_path`] with the working-directory check supplied by
+/// the caller, so background indexing can avoid touching privacy-protected
+/// folders.
+pub(crate) fn session_summary_from_path_with(
+    path: &Path,
+    cwd_available: impl Fn(&Path) -> bool,
+) -> anyhow::Result<ProviderSessionSummary> {
     let session_id = path
         .file_stem()
         .and_then(|stem| stem.to_str())
@@ -278,7 +288,7 @@ pub(crate) fn session_summary_from_path(path: &Path) -> anyhow::Result<ProviderS
         .copied()
         .find_map(|entry| entry.get("cwd").and_then(Value::as_str))
         .map(PathBuf::from)
-        .filter(|cwd| cwd.is_absolute() && cwd.is_dir())
+        .filter(|cwd| cwd.is_absolute() && cwd_available(cwd))
         .ok_or_else(|| anyhow!("Claude session {session_id} has no available working directory"))?;
     let first_prompt = transcript
         .iter()
