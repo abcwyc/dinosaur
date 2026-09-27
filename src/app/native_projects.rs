@@ -45,6 +45,9 @@ pub(super) struct NativePrefs {
     pinned_projects: Vec<PathBuf>,
     #[serde(default)]
     project_names: HashMap<PathBuf, String>,
+    /// Optional parts of each sidebar row.
+    #[serde(default)]
+    pub(super) show: super::sidebar_compact::RowDisplay,
 }
 
 impl NativePrefs {
@@ -56,7 +59,7 @@ impl NativePrefs {
         fs_read_json(&Self::path()).unwrap_or_default()
     }
 
-    fn save(&self) {
+    pub(super) fn save(&self) {
         if let Ok(bytes) = serde_json::to_vec_pretty(self) {
             let path = Self::path();
             let temporary = path.with_extension("json.tmp");

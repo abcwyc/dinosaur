@@ -922,6 +922,28 @@ impl StateStore {
         }
     }
 
+    pub fn pull_requests(
+        &self,
+        targets: Vec<waku_protocol::native_session::PullRequestTarget>,
+    ) -> impl FnOnce() -> io::Result<Vec<waku_protocol::native_session::PullRequestInfo>> + Send + 'static
+    {
+        let daemon = self.daemon.clone();
+        move || match daemon
+            .client()
+            .request(
+                Uuid::nil(),
+                Uuid::nil(),
+                Command::LookupPullRequests { targets },
+            )
+            .map_err(to_io_error)?
+        {
+            ResponsePayload::PullRequests { pull_requests } => Ok(pull_requests),
+            _ => Err(io::Error::other(
+                "Waku daemon returned an invalid pull-request response",
+            )),
+        }
+    }
+
     pub fn provider_session_history(
         &self,
         cursor: ProviderResumeCursor,

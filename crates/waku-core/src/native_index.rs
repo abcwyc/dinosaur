@@ -224,7 +224,7 @@ fn native(summary: ProviderSessionSummary) -> NativeSessionSummary {
 
 /// Folders macOS guards with a privacy prompt. Probing a historical cwd inside
 /// one would ask the user for access just because the sidebar refreshed.
-fn is_privacy_protected(path: &Path) -> bool {
+pub(crate) fn is_privacy_protected(path: &Path) -> bool {
     let Some(home) = dirs::home_dir() else {
         return true;
     };

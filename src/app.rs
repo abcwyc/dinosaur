@@ -1631,6 +1631,7 @@ mod runtime;
 mod sessions;
 mod settings;
 mod sidebar;
+mod sidebar_compact;
 mod skills_page;
 mod streaming;
 mod task_switcher;

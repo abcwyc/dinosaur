@@ -20,6 +20,7 @@ use super::native_projects::{INDEXED_PROVIDERS, NativePrefs, PROCESS_PROVIDERS, 
 use super::sidebar::{
     SIDEBAR_GROUP_CHILD_PADDING, SIDEBAR_GROUP_GUIDE_X, SIDEBAR_SESSION_ROW_GAP, format_time_ago,
 };
+use super::sidebar_compact::{CompactRow, RowStatus};
 use super::*;
 
 const NATIVE_CATALOG_LIMIT: usize = 250;
@@ -86,6 +87,12 @@ pub(super) struct NativeCatalog {
     /// Folder behind each native-only group id, rebuilt when entries change so
     /// header rendering never hashes the whole catalog.
     group_paths: HashMap<Uuid, PathBuf>,
+    /// Pull requests by branch checkout, from the daemon's GitHub CLI lookup.
+    pub(super) pull_requests: HashMap<
+        waku_protocol::native_session::PullRequestTarget,
+        waku_protocol::native_session::PullRequestInfo,
+    >,
+    pub(super) pull_requests_pending: bool,
 }
 
 impl NativeCatalog {
@@ -266,6 +273,7 @@ impl Waku {
     /// plus any enabled process-backed provider whose listing is due.
     pub(super) fn refresh_native_catalog(&mut self, cx: &mut Context<Self>) {
         self.refresh_native_index(cx);
+        self.refresh_pull_requests(cx);
         let due = PROCESS_PROVIDERS
             .into_iter()
             .filter(|provider| self.native_catalog.prefs.is_enabled(*provider))
@@ -473,9 +481,20 @@ impl Waku {
     pub(super) fn merge_native_date_groups(
         &self,
         groups: &mut [Vec<Uuid>],
-        timestamps: &HashMap<Uuid, u64>,
         bucket: impl Fn(u64) -> usize,
     ) {
+        let timestamps = self
+            .state
+            .sessions
+            .iter()
+            .map(|session| {
+                (
+                    session.id,
+                    super::sidebar::sidebar_session_timestamp(session),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let timestamps = &timestamps;
         let mut native: Vec<Vec<(Uuid, u64)>> = vec![Vec::new(); groups.len()];
         for (id, _, timestamp) in self.native_sidebar_items(&HashSet::new()) {
             native[bucket(timestamp)].push((id, timestamp));
@@ -531,6 +550,21 @@ impl Waku {
     pub(super) fn native_project_label(&self, project_id: Uuid) -> Option<String> {
         self.native_group_path(project_id)
             .map(|cwd| Project::from_path(cwd).name)
+    }
+
+    /// Worktree branches of native conversations, for pull request lookup.
+    pub(super) fn native_pull_request_targets(
+        &self,
+    ) -> Vec<waku_protocol::native_session::PullRequestTarget> {
+        self.native_catalog
+            .entries()
+            .filter_map(|entry| {
+                Some(waku_protocol::native_session::PullRequestTarget {
+                    cwd: entry.summary.cwd.clone(),
+                    branch: entry.branch.clone()?,
+                })
+            })
+            .collect()
     }
 
     /// The folder behind a native-only project group.
@@ -664,15 +698,6 @@ impl Waku {
         } else {
             8.0
         };
-        let detail = if grouped_by_project {
-            SharedString::from(provider.display_name())
-        } else {
-            SharedString::from(format!(
-                "{} · {}",
-                provider.display_name(),
-                Project::from_path(entry.group_path().to_path_buf()).name
-            ))
-        };
         let time_label = format_time_ago(unix_time().saturating_sub(entry.timestamp()));
         let focus = self
             .native_row_focuses
@@ -680,6 +705,26 @@ impl Waku {
             .entry(id)
             .or_insert_with(|| cx.focus_handle())
             .clone();
+        let title = div()
+            .flex_1()
+            .min_w_0()
+            .truncate()
+            .text_size(sp(13.0))
+            .text_color(theme.text_secondary)
+            .child(SharedString::from(entry.summary.title.clone()))
+            .into_any_element();
+        let compact = self.render_compact_row(
+            CompactRow {
+                status: RowStatus::Native { importing },
+                provider,
+                title,
+                branch: entry.branch.clone().map(SharedString::from),
+                branch_cwd: Some(entry.summary.cwd.clone()),
+                time: Some(time_label),
+                time_emphasis: false,
+            },
+            cx,
+        );
 
         let row = div()
             .id(SharedString::from(format!("native-session-{id}")))
@@ -688,67 +733,21 @@ impl Waku {
             .w_full()
             .min_w_0()
             .flex()
-            .flex_col()
-            .gap(px(4.0))
+            .items_center()
             .pl(px(left_padding))
             .pr(px(8.0))
-            .py(px(7.0))
+            .py(px(5.0))
             .rounded(px(7.0))
             .cursor_default()
             .focus_visible(|style| style.border_1().border_color(theme.accent))
             .hover(|element| element.bg(theme.sidebar_item_background))
             .active(|element| element.bg(theme.sidebar_item_background))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(6.0))
-                    .overflow_hidden()
-                    .line_height(sp(18.0))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w_0()
-                            .truncate()
-                            .text_size(sp(13.5))
-                            .text_color(theme.text_secondary)
-                            .child(SharedString::from(entry.summary.title.clone())),
-                    )
-                    .when(importing, |element| {
-                        element.child(motion::spin_slow(icon(
-                            "icons/loader-circle.svg",
-                            12.0,
-                            theme.text_tertiary,
-                        )))
-                    }),
-            )
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(5.0))
-                    .text_size(sp(12.5))
-                    .line_height(sp(15.0))
-                    .child(icon(
-                        crate::ui::provider_icon(provider),
-                        12.5,
-                        theme.text_tertiary,
-                    ))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w_0()
-                            .truncate()
-                            .text_color(theme.text_tertiary)
-                            .child(detail),
-                    )
-                    .child(
-                        div()
-                            .flex_none()
-                            .text_color(theme.text_ghost)
-                            .child(SharedString::from(time_label)),
-                    ),
-            )
+            .tooltip(Tooltip::text(format!(
+                "{} · {}",
+                provider.display_name(),
+                entry.summary.cwd.display()
+            )))
+            .child(compact)
             .on_key_down(cx.listener(move |this, event: &KeyDownEvent, window, cx| {
                 if matches!(event.keystroke.key.as_str(), "enter" | "space") {
                     this.open_native_session(id, window, cx);

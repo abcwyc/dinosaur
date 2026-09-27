@@ -253,6 +253,14 @@ sidebar.agent_history_processes: エージェントを起動して取得（10 �
 sidebar.pin_project: プロジェクトをピン留め
 sidebar.unpin_project: ピン留めを解除
 sidebar.reset_project_name: 名前をリセット
+sidebar.show: 表示
+sidebar.show_branch: ブランチ
+sidebar.show_pull_request: プルリクエスト
+sidebar.show_harness: エージェント
+sidebar.pr_open: オープン
+sidebar.pr_draft: ドラフト
+sidebar.pr_merged: マージ済み
+sidebar.pr_closed: クローズ
 sidebar.show_more: もっと見る
 sidebar.yesterday: 昨日
 sidebar.this_week: 今週

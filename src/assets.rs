@@ -152,6 +152,7 @@ const ICONS: &[(&str, &[u8])] = icons![
     "file-types/zip",
     "fork",
     "git-branch",
+    "git-pull-request",
     "git-commit-horizontal",
     "globe",
     "github",

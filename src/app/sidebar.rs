@@ -205,7 +205,7 @@ fn updater_button_available_content(
 /// Height of a session card plus the separation reserved beneath it in the
 /// virtualized sidebar list. Keep the gap inside the list row so measured and
 /// estimated heights stay identical for off-screen sessions.
-const SIDEBAR_SESSION_CARD_HEIGHT: f32 = 51.0;
+const SIDEBAR_SESSION_CARD_HEIGHT: f32 = super::sidebar_compact::COMPACT_ROW_HEIGHT;
 pub(super) const SIDEBAR_SESSION_ROW_GAP: f32 = 1.0;
 const SIDEBAR_SESSION_ROW_HEIGHT: f32 = SIDEBAR_SESSION_CARD_HEIGHT + SIDEBAR_SESSION_ROW_GAP;
 const SIDEBAR_ACTION_ROW_HEIGHT: f32 = 32.0;
@@ -245,7 +245,7 @@ pub(super) fn session_time_label(session: &AgentSession, now: u64) -> Option<Str
 /// Recency for sidebar ordering and date groups. A submitted turn promotes the
 /// task immediately, while metadata edits such as a rename do not; a task with
 /// no turns stays anchored to when it was created.
-fn sidebar_session_timestamp(session: &AgentSession) -> u64 {
+pub(super) fn sidebar_session_timestamp(session: &AgentSession) -> u64 {
     session.last_reply_at.unwrap_or(session.created_at)
 }
 
@@ -311,7 +311,7 @@ fn sidebar_project_is_projectless(project: &Project, projectless_root: Option<&P
     projectless_root.is_some_and(|root| project.path.starts_with(root))
 }
 
-fn persisted_sidebar_branch_label(workspace: &SessionWorkspace) -> Option<&str> {
+pub(super) fn persisted_sidebar_branch_label(workspace: &SessionWorkspace) -> Option<&str> {
     match workspace {
         SessionWorkspace::Local => None,
         SessionWorkspace::NewWorktree { base_branch } => base_branch.as_deref(),
@@ -601,6 +601,7 @@ impl Waku {
         let grouping = self.state.sidebar_grouping;
         let ordering = self.state.sidebar_ordering;
         let agent_history = self.native_history_menu(cx);
+        let row_display = self.row_display_menu(cx);
         let options = dropdown_menu(
             div()
                 .id("sidebar-options")
@@ -670,6 +671,9 @@ impl Waku {
                     ),
                     agent_history(),
                 ]
+                .into_iter()
+                .chain(row_display())
+                .collect()
             },
         );
         let add_project = div()
@@ -951,7 +955,8 @@ impl Waku {
     /// The render path only computes an allocation-free source fingerprint;
     /// collection building and daemon requests happen once when that moves.
     fn ensure_sidebar_branch_labels(&self, cx: &mut Context<Self>) {
-        if self.state.sidebar_grouping != SidebarGrouping::Project {
+        let display = self.row_display();
+        if !display.branch && !display.pull_request {
             return;
         }
 
@@ -1025,6 +1030,7 @@ impl Waku {
                     .into_iter()
                     .map(|(path, branch)| (path, SharedString::from(branch)))
                     .collect();
+                waku.refresh_pull_requests(cx);
                 cx.notify();
             });
         })
@@ -1248,16 +1254,12 @@ impl Waku {
         match self.state.sidebar_grouping {
             SidebarGrouping::Updated => {
                 let mut grouped_sessions: [Vec<Uuid>; 6] = std::array::from_fn(|_| Vec::new());
-                for session in &sorted_sessions {
+                for session in sorted_sessions {
                     grouped_sessions
                         [session_date_group(sidebar_session_timestamp(session), today).index()]
                     .push(session.id);
                 }
-                let timestamps = sorted_sessions
-                    .iter()
-                    .map(|session| (session.id, sidebar_session_timestamp(session)))
-                    .collect::<HashMap<_, _>>();
-                self.merge_native_date_groups(&mut grouped_sessions, &timestamps, |timestamp| {
+                self.merge_native_date_groups(&mut grouped_sessions, |timestamp| {
                     session_date_group(timestamp, today).index()
                 });
                 let mut groups = SessionDateGroup::ALL;
@@ -1755,7 +1757,7 @@ impl Waku {
         cx.notify();
     }
 
-    fn begin_session_rename(
+    pub(super) fn begin_session_rename(
         &mut self,
         session_id: Uuid,
         window: &mut Window,
@@ -1812,7 +1814,7 @@ impl Waku {
         cx.notify();
     }
 
-    fn cancel_session_rename(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn cancel_session_rename(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.session_rename.take().is_none() {
             return;
         }
@@ -1822,6 +1824,9 @@ impl Waku {
     }
 
     fn render_sidebar_session_item(&self, session_id: Uuid, cx: &mut Context<Self>) -> AnyElement {
+        if let Some(row) = self.render_compact_session_item(session_id, cx) {
+            return row;
+        }
         let theme = Theme::current(cx);
         let Some(session) = self
             .state
@@ -2437,7 +2442,7 @@ impl Waku {
     }
 }
 
-fn localized_session_title(session: &AgentSession) -> String {
+pub(super) fn localized_session_title(session: &AgentSession) -> String {
     let title = session.display_title();
     if title == AgentSession::DEFAULT_TITLE {
         tr!("session.new_task")
@@ -2446,7 +2451,7 @@ fn localized_session_title(session: &AgentSession) -> String {
     }
 }
 
-fn sidebar_session_selected(
+pub(super) fn sidebar_session_selected(
     selected_session: Option<Uuid>,
     pending_session: Option<Uuid>,
     session_id: Uuid,
@@ -2719,8 +2724,8 @@ mod tests {
         let offset = sidebar_bottom_aligned_offset(&rows, index, px(400.0));
 
         assert_eq!(index, 32);
-        assert_eq!(offset.item_ix, 25);
-        assert_eq!(offset.offset_in_item, px(16.0));
+        assert_eq!(offset.item_ix, 20);
+        assert_eq!(offset.offset_in_item, px(3.0));
         let visible_height = rows[offset.item_ix..=index]
             .iter()
             .copied()

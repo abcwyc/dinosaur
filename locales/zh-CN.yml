@@ -241,6 +241,14 @@ sidebar.agent_history_processes: 需启动 agent 读取（每 10 分钟刷新）
 sidebar.pin_project: 置顶项目
 sidebar.unpin_project: 取消置顶
 sidebar.reset_project_name: 恢复默认名称
+sidebar.show: 显示
+sidebar.show_branch: 分支
+sidebar.show_pull_request: Pull request
+sidebar.show_harness: Agent
+sidebar.pr_open: 进行中
+sidebar.pr_draft: 草稿
+sidebar.pr_merged: 已合并
+sidebar.pr_closed: 已关闭
 sidebar.show_more: 显示更多
 sidebar.yesterday: 昨天
 sidebar.this_week: 本周
@@ -249,9 +257,9 @@ sidebar.this_year: 今年
 sidebar.more: 更早
 sidebar.working: 工作中 · %{elapsed}
 sidebar.just_now: 刚刚
-sidebar.minutes_ago: "%{count} 分钟前"
-sidebar.hours_ago: "%{count} 小时前"
-sidebar.days_ago: "%{count} 天前"
+sidebar.minutes_ago: "%{count}分钟"
+sidebar.hours_ago: "%{count}小时"
+sidebar.days_ago: "%{count}天"
 sidebar.unknown_project: 未知项目
 sidebar.close: 关闭侧边栏
 sidebar.hide: 隐藏侧边栏

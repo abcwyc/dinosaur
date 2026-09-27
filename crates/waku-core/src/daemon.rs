@@ -55,6 +55,7 @@ pub struct WakuBackend {
     attachments: AttachmentStore,
     usage_scan_cache: Mutex<crate::usage_history::ScanCache>,
     native_index: crate::native_index::NativeIndex,
+    pull_requests: crate::pull_requests::PullRequestCache,
     checkpoint_capture_locks: Mutex<HashMap<(PathBuf, Uuid, usize), Arc<Mutex<()>>>>,
     usage_rates_dir: std::path::PathBuf,
     default_cwd: std::path::PathBuf,
@@ -93,6 +94,7 @@ impl WakuBackend {
             attachments,
             usage_scan_cache: Mutex::new(HashMap::new()),
             native_index,
+            pull_requests: Default::default(),
             checkpoint_capture_locks: Mutex::new(HashMap::new()),
             usage_rates_dir,
             default_cwd: std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
@@ -570,6 +572,9 @@ impl Backend for WakuBackend {
                     sessions: self.native_index.list(&providers, limit.min(1_000)),
                 })
             }
+            Command::LookupPullRequests { targets } => Ok(ResponsePayload::PullRequests {
+                pull_requests: self.pull_requests.lookup(targets),
+            }),
             Command::LoadProviderSession { cursor, cwd } => {
                 // Preserve every native turn shell for exact provider turn
                 // numbering, but bound imported display text to recent turns.
@@ -1858,6 +1863,7 @@ fn handle_driver_command(
         | Command::SearchSessionMessages { .. }
         | Command::ListProviderSessions { .. }
         | Command::ListNativeSessions { .. }
+        | Command::LookupPullRequests { .. }
         | Command::LoadProviderSession { .. }
         | Command::LoadComposerDrafts
         | Command::SaveComposerDrafts { .. }

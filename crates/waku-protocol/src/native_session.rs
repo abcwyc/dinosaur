@@ -28,3 +28,31 @@ impl NativeSessionSummary {
         self.project_path.as_deref().unwrap_or(&self.summary.cwd)
     }
 }
+
+/// A branch checked out in `cwd` whose pull request the sidebar would like to
+/// show.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PullRequestTarget {
+    pub cwd: PathBuf,
+    pub branch: String,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum PullRequestState {
+    Open,
+    Draft,
+    Merged,
+    Closed,
+}
+
+/// The most recent pull request whose head is `target.branch`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PullRequestInfo {
+    pub target: PullRequestTarget,
+    pub number: u64,
+    pub state: PullRequestState,
+    pub url: String,
+}

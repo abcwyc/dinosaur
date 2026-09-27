@@ -500,6 +500,22 @@ sidebar.unpin_project:
   en: Unpin project
 sidebar.reset_project_name:
   en: Reset name
+sidebar.show:
+  en: Show
+sidebar.show_branch:
+  en: Branch
+sidebar.show_pull_request:
+  en: Pull request
+sidebar.show_harness:
+  en: Harness
+sidebar.pr_open:
+  en: Open
+sidebar.pr_draft:
+  en: Draft
+sidebar.pr_merged:
+  en: Merged
+sidebar.pr_closed:
+  en: Closed
 sidebar.show_more:
   en: Show more
 sidebar.yesterday:
