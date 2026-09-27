@@ -17,9 +17,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use waku_protocol::native_session::NativeSessionSummary;
 
 use super::native_projects::{INDEXED_PROVIDERS, NativePrefs, PROCESS_PROVIDERS, process_summary};
-use super::sidebar::{
-    SIDEBAR_GROUP_CHILD_PADDING, SIDEBAR_GROUP_GUIDE_X, SIDEBAR_SESSION_ROW_GAP, format_time_ago,
-};
+use super::sidebar::{SIDEBAR_ROW_INSET, SIDEBAR_SESSION_ROW_GAP, format_time_ago};
 use super::sidebar_compact::{CompactRow, RowStatus};
 use super::*;
 
@@ -754,12 +752,6 @@ impl Waku {
         };
         let provider = entry.summary.provider();
         let importing = self.native_catalog.importing == Some(id);
-        let grouped_by_project = self.state.sidebar_grouping == SidebarGrouping::Project;
-        let left_padding = if grouped_by_project {
-            SIDEBAR_GROUP_CHILD_PADDING
-        } else {
-            8.0
-        };
         let time_label = format_time_ago(unix_time().saturating_sub(entry.timestamp()));
         let focus = self
             .native_row_focuses
@@ -796,7 +788,7 @@ impl Waku {
             .min_w_0()
             .flex()
             .items_center()
-            .pl(px(left_padding))
+            .pl(px(SIDEBAR_ROW_INSET))
             .pr(px(8.0))
             .py(px(5.0))
             .rounded(px(7.0))
@@ -821,21 +813,9 @@ impl Waku {
             }));
 
         div()
-            .relative()
             .w_full()
             .pb(px(SIDEBAR_SESSION_ROW_GAP))
             .child(row)
-            .when(grouped_by_project, |element| {
-                element.child(
-                    div()
-                        .absolute()
-                        .left(px(SIDEBAR_GROUP_GUIDE_X))
-                        .top_0()
-                        .bottom_0()
-                        .w(px(1.0))
-                        .bg(theme.border),
-                )
-            })
             .into_any_element()
     }
 }

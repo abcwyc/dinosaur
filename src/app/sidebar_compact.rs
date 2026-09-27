@@ -12,9 +12,9 @@ use serde::{Deserialize, Serialize};
 use waku_protocol::native_session::{PullRequestInfo, PullRequestState, PullRequestTarget};
 
 use super::sidebar::{
-    CancelSessionRename, SESSION_RENAME_PARENT_CONTEXT, SIDEBAR_GROUP_CHILD_PADDING,
-    SIDEBAR_GROUP_GUIDE_X, SIDEBAR_SESSION_ROW_GAP, localized_session_title,
-    persisted_sidebar_branch_label, session_time_label, sidebar_session_selected,
+    CancelSessionRename, SESSION_RENAME_PARENT_CONTEXT, SIDEBAR_ROW_INSET, SIDEBAR_SESSION_ROW_GAP,
+    localized_session_title, persisted_sidebar_branch_label, session_time_label,
+    sidebar_session_selected,
 };
 use super::*;
 
@@ -449,12 +449,6 @@ impl Waku {
             .projects
             .iter()
             .find(|project| project.id == session.project_id);
-        let grouped_by_project = self.state.sidebar_grouping == SidebarGrouping::Project;
-        let left_padding = if grouped_by_project {
-            SIDEBAR_GROUP_CHILD_PADDING
-        } else {
-            8.0
-        };
         let branch = persisted_sidebar_branch_label(&session.workspace)
             .map(|branch| SharedString::from(branch.to_owned()))
             .or_else(|| {
@@ -533,7 +527,7 @@ impl Waku {
             .min_w_0()
             .flex()
             .items_center()
-            .pl(px(left_padding))
+            .pl(px(SIDEBAR_ROW_INSET))
             .pr(px(8.0))
             .py(px(5.0))
             .rounded(px(7.0))
@@ -599,21 +593,9 @@ impl Waku {
 
         Some(
             div()
-                .relative()
                 .w_full()
                 .pb(px(SIDEBAR_SESSION_ROW_GAP))
                 .child(row)
-                .when(grouped_by_project, |element| {
-                    element.child(
-                        div()
-                            .absolute()
-                            .left(px(SIDEBAR_GROUP_GUIDE_X))
-                            .top_0()
-                            .bottom_0()
-                            .w(px(1.0))
-                            .bg(theme.border),
-                    )
-                })
                 .into_any_element(),
         )
     }

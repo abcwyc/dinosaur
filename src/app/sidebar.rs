@@ -142,7 +142,7 @@ fn session_date_group_for_dates(session_date: NaiveDate, today: NaiveDate) -> Se
 fn session_group_header(theme: &Theme) -> Div {
     div()
         .h(px(SIDEBAR_GROUP_HEADER_HEIGHT))
-        .px(px(8.0))
+        .px(px(SIDEBAR_ROW_INSET))
         .flex()
         .items_center()
         .text_size(sp(13.0))
@@ -214,8 +214,9 @@ const SIDEBAR_GROUP_HEADER_HEIGHT: f32 = 28.0;
 const SIDEBAR_GROUP_HEADER_BOTTOM_GAP: f32 = 2.0;
 const SIDEBAR_SHOW_MORE_ROW_HEIGHT: f32 = 30.0;
 const SIDEBAR_GROUP_SPACER_HEIGHT: f32 = 10.0;
-pub(super) const SIDEBAR_GROUP_GUIDE_X: f32 = 15.0;
-pub(super) const SIDEBAR_GROUP_CHILD_PADDING: f32 = 28.0;
+/// Left inset shared by group headers and their rows, so a session row starts
+/// flush with the project folder icon above it.
+pub(super) const SIDEBAR_ROW_INSET: f32 = 8.0;
 const SIDEBAR_PROJECT_RECENT_WINDOW_SECONDS: u64 = 3 * 24 * 60 * 60;
 const SIDEBAR_PROJECT_REVEAL_BATCH: usize = 30;
 
@@ -1389,16 +1390,9 @@ impl Waku {
         };
         match *row {
             SidebarRow::Search => self.render_sidebar_search(cx).into_any_element(),
-            SidebarRow::Header(group) => {
-                let has_expanded_children = rows.get(index + 1).is_some_and(|row| {
-                    matches!(
-                        row,
-                        SidebarRow::Session(_) | SidebarRow::Native(_) | SidebarRow::ShowMore(_)
-                    )
-                });
-                self.render_sidebar_group_header(group, index == 1, has_expanded_children, cx)
-                    .into_any_element()
-            }
+            SidebarRow::Header(group) => self
+                .render_sidebar_group_header(group, index == 1, cx)
+                .into_any_element(),
             SidebarRow::Session(session_id) => self
                 .render_sidebar_session_item(session_id, cx)
                 .into_any_element(),
@@ -1417,7 +1411,6 @@ impl Waku {
         &self,
         group: SidebarGroup,
         first: bool,
-        has_expanded_children: bool,
         cx: &mut Context<Self>,
     ) -> Div {
         let theme = Theme::current(cx);
@@ -1559,17 +1552,6 @@ impl Waku {
             .when(first, |element| {
                 element.child(self.render_sidebar_header_actions(cx))
             })
-            .when(show_folder_icon && has_expanded_children, |element| {
-                element.child(
-                    div()
-                        .absolute()
-                        .left(px(SIDEBAR_GROUP_GUIDE_X))
-                        .top(px(19.0))
-                        .bottom(px(-2.0))
-                        .w(px(1.0))
-                        .bg(theme.border),
-                )
-            })
             .on_click(cx.listener(move |this, _, _, cx| {
                 if !this.is_renaming_project_group(group) {
                     this.toggle_sidebar_group(group, cx);
@@ -1653,27 +1635,12 @@ impl Waku {
             }));
 
         div()
-            .relative()
             .w_full()
             .h(px(SIDEBAR_SHOW_MORE_ROW_HEIGHT))
-            .pl(px(SIDEBAR_GROUP_CHILD_PADDING))
+            .pl(px(SIDEBAR_ROW_INSET))
             .flex()
             .items_center()
             .child(button)
-            .child(
-                div()
-                    .absolute()
-                    .left(px(SIDEBAR_GROUP_GUIDE_X))
-                    .top_0()
-                    .w(px(SIDEBAR_GROUP_CHILD_PADDING
-                        - SIDEBAR_GROUP_GUIDE_X
-                        - 4.0))
-                    .h(px(15.0))
-                    .border_l_1()
-                    .border_b_1()
-                    .rounded_bl(px(4.0))
-                    .border_color(theme.border),
-            )
     }
 
     fn show_more_project_sessions(&mut self, group: SidebarGroup, cx: &mut Context<Self>) {
@@ -1852,11 +1819,6 @@ impl Waku {
             .iter()
             .find(|project| project.id == session.project_id);
         let grouped_by_project = self.state.sidebar_grouping == SidebarGrouping::Project;
-        let left_padding = if grouped_by_project {
-            SIDEBAR_GROUP_CHILD_PADDING
-        } else {
-            8.0
-        };
         let detail_label = if grouped_by_project {
             persisted_sidebar_branch_label(&session.workspace)
                 .map(|branch| SharedString::from(branch.to_owned()))
@@ -1933,7 +1895,7 @@ impl Waku {
             .flex()
             .flex_col()
             .gap(px(4.0))
-            .pl(px(left_padding))
+            .pl(px(SIDEBAR_ROW_INSET))
             .pr(px(8.0))
             .py(px(7.0))
             .rounded(px(7.0))
@@ -2075,17 +2037,6 @@ impl Waku {
             .w_full()
             .pb(px(SIDEBAR_SESSION_ROW_GAP))
             .child(row)
-            .when(grouped_by_project, |element| {
-                element.child(
-                    div()
-                        .absolute()
-                        .left(px(SIDEBAR_GROUP_GUIDE_X))
-                        .top_0()
-                        .bottom_0()
-                        .w(px(1.0))
-                        .bg(theme.border),
-                )
-            })
             .into_any_element()
     }
 
