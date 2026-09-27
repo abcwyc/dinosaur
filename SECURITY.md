@@ -3,12 +3,12 @@
 ## Supported Versions
 
 Only the latest release of Dinosaur receives security fixes. Updates ship
-through the in-app updater and https://waku.sh.
+through the in-app updater and https://github.com/abcwyc/dinosaur/releases.
 
 ## Reporting a Vulnerability
 
 Please use GitHub private vulnerability reporting:
-https://github.com/egoist/waku/security/advisories/new
+https://github.com/abcwyc/dinosaur/security/advisories/new
 
 If that doesn't work for you, email hi@egoist.dev.
 

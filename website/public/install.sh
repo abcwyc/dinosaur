@@ -2,24 +2,25 @@
 set -eu
 
 # Installs Dinosaur for Linux into ~/.local — no root, no package manager.
-# Downloads the release tarball from https://releases.waku.sh, unpacks it as
+# Downloads the release tarball from the GitHub releases of abcwyc/dinosaur,
+# unpacks it as
 # ~/.local/waku.app, links the binary onto PATH, and registers the desktop
 # entry. docs/linux.md documents the equivalent manual steps.
 #
-#   curl -fsSL https://waku.sh/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/abcwyc/dinosaur/main/website/public/install.sh | sh
 #
 # Environment:
 #   WAKU_VERSION        install this version instead of the latest
 #   WAKU_BUNDLE_PATH    install a local tarball instead of downloading
-#   WAKU_RELEASES_URL   base URL to download from
+#   WAKU_RELEASES_URL   GitHub releases URL to download from
 
 usage() {
     cat <<'USAGE'
 Install Dinosaur for Linux into ~/.local.
 
 Usage:
-  curl -fsSL https://waku.sh/install.sh | sh
-  curl -fsSL https://waku.sh/install.sh | sh -s -- --uninstall
+  curl -fsSL https://raw.githubusercontent.com/abcwyc/dinosaur/main/website/public/install.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/abcwyc/dinosaur/main/website/public/install.sh | sh -s -- --uninstall
 
 Options:
   --uninstall   Remove Dinosaur, leaving ~/.waku (projects and settings) alone
@@ -33,7 +34,7 @@ main() {
     desktop_file="$HOME/.local/share/applications/sh.dinosaur.desktop"
     # The launcher entry's name before the Waku -> Dinosaur rename.
     legacy_desktop_file="$HOME/.local/share/applications/sh.waku.desktop"
-    releases="${WAKU_RELEASES_URL:-https://releases.waku.sh}"
+    releases="${WAKU_RELEASES_URL:-https://github.com/abcwyc/dinosaur/releases}"
 
     case "${1:-}" in
         --uninstall) uninstall; return ;;
@@ -49,7 +50,7 @@ main() {
     platform="$(uname -s)"
     if [ "$platform" = "Darwin" ]; then
         echo "Dinosaur for macOS ships as a signed .dmg that updates itself." >&2
-        echo "Download it from https://waku.sh" >&2
+        echo "Download it from https://github.com/abcwyc/dinosaur/releases/latest" >&2
         exit 1
     fi
     if [ "$platform" != "Linux" ]; then
@@ -63,7 +64,7 @@ main() {
         aarch64 | arm64) target="aarch64-unknown-linux-gnu" ;;
         *)
             echo "Unsupported architecture: $machine" >&2
-            echo "Build from source: https://github.com/egoist/waku" >&2
+            echo "Build from source: https://github.com/abcwyc/dinosaur" >&2
             exit 1
             ;;
     esac
@@ -87,8 +88,8 @@ main() {
     else
         version="${WAKU_VERSION:-}"
         if [ -z "$version" ]; then
-            if ! version="$(fetch "$releases/latest-linux.txt")"; then
-                echo "Could not reach $releases/latest-linux.txt." >&2
+            if ! version="$(fetch "$releases/latest/download/latest-linux.txt")"; then
+                echo "Could not reach $releases/latest/download/latest-linux.txt." >&2
                 echo "Pass WAKU_VERSION to install a specific version." >&2
                 exit 1
             fi
@@ -99,8 +100,8 @@ main() {
             exit 1
         fi
         echo "Downloading Dinosaur $version for $machine"
-        if ! fetch "$releases/waku-$version-$target.tar.gz" >"$archive"; then
-            echo "Download failed: $releases/waku-$version-$target.tar.gz" >&2
+        if ! fetch "$releases/download/v$version/waku-$version-$target.tar.gz" >"$archive"; then
+            echo "Download failed: $releases/download/v$version/waku-$version-$target.tar.gz" >&2
             exit 1
         fi
     fi

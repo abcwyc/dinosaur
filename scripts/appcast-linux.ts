@@ -14,7 +14,7 @@ import { sign } from "node:crypto";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import { defaultDownloadUrlPrefix } from "./appcast.ts";
+import { downloadUrlPrefixFor } from "./appcast.ts";
 import {
   appPublicKey,
   architectures,
@@ -118,7 +118,7 @@ if (import.meta.main) {
   await generateLinuxAppcasts(
     assetsDir,
     version,
-    process.env.WAKU_DOWNLOAD_URL_PREFIX ?? defaultDownloadUrlPrefix,
+    process.env.WAKU_DOWNLOAD_URL_PREFIX ?? downloadUrlPrefixFor(version),
     new Date().toUTCString(),
   );
 }

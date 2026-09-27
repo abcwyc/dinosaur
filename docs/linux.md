@@ -3,7 +3,7 @@
 ## Install
 
 ```sh
-curl -fsSL https://waku.sh/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/abcwyc/dinosaur/main/website/public/install.sh | sh
 ```
 
 The script needs no root. It unpacks the release tarball into
@@ -30,8 +30,8 @@ Set `WAKU_VERSION` to install a specific version rather than the latest.
 
 The script is a convenience, not a requirement. Download
 `waku-<version>-<target>.tar.gz` from
-[releases.waku.sh](https://releases.waku.sh) or the
-[GitHub release](https://github.com/egoist/waku/releases), then unpack it
+the [GitHub release](https://github.com/abcwyc/dinosaur/releases), then unpack
+it
 wherever you like:
 
 ```sh
@@ -77,8 +77,8 @@ previous version.
 Every archive is verified with the same Ed25519 release key used by the macOS
 and Windows updaters. The architecture-specific feeds are:
 
-- `https://releases.waku.sh/appcast-linux-x86_64.xml`
-- `https://releases.waku.sh/appcast-linux-aarch64.xml`
+- `https://github.com/abcwyc/dinosaur/releases/latest/download/appcast-linux-x86_64.xml`
+- `https://github.com/abcwyc/dinosaur/releases/latest/download/appcast-linux-aarch64.xml`
 
 Use **Check for Updates** for an explicit check, or disable launch checks in
 **Settings → General → Automatic updates**. System-wide installs such as
@@ -90,7 +90,7 @@ manual fallback for the default `~/.local/waku.app` install.
 ## Uninstalling
 
 ```sh
-curl -fsSL https://waku.sh/install.sh | sh -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/abcwyc/dinosaur/main/website/public/install.sh | sh -s -- --uninstall
 ```
 
 This removes `~/.local/waku.app`, the symlink, and the desktop entry. Projects

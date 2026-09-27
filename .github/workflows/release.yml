@@ -357,7 +357,7 @@ jobs:
           WAKU_ANALYTICS_ENDPOINT: ${{ secrets.WAKU_ANALYTICS_ENDPOINT }}
           WAKU_ANALYTICS_WEBSITE_ID: ${{ secrets.WAKU_ANALYTICS_WEBSITE_ID }}
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
-        run: bun run release --local
+        run: bun run release
 
       - uses: actions/upload-artifact@v7
         with:
@@ -411,12 +411,13 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          # Merge into the live feeds so previously published releases keep
-          # their entries; a first run simply starts from nothing.
+          # Merge into the live feeds (the latest published release's copies)
+          # so earlier releases keep their entries; a first run simply starts
+          # from nothing.
           for platform in linux windows; do
             for arch in x86_64 aarch64; do
               curl -fsSL --max-time 30 \
-                "https://releases.waku.sh/appcast-$platform-$arch.xml" \
+                "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/appcast-$platform-$arch.xml" \
                 -o "artifacts/appcast-$platform-$arch.xml" || true
             done
           done

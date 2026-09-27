@@ -7,12 +7,11 @@ export interface LatestRelease {
   pubDate: string | null
 }
 
-const RELEASES_BASE = 'https://releases.waku.sh'
+const RELEASES_BASE = 'https://github.com/abcwyc/dinosaur/releases'
 
-// Versioned artifact names are a stable contract and old archives stay in R2
-// (see RELEASING.md), so a known-published version is a safe fallback while
-// the appcast query is pending or unreachable.
-export const FALLBACK_DOWNLOAD_URL = `${RELEASES_BASE}/Dinosaur-0.0.1.dmg`
+// The releases page always lists the newest downloads, so it is the fallback
+// while the appcast query is pending or unreachable.
+export const FALLBACK_DOWNLOAD_URL = `${RELEASES_BASE}/latest`
 
 export const WINDOWS_ARCHITECTURES = [
   { arch: 'x86_64', label: 'Windows (x86_64)' },
@@ -24,14 +23,14 @@ export const WINDOWS_ARCHITECTURES = [
 // direct link needs the resolved version; without one the menu falls back to
 // the docs page rather than guessing a URL that would 404.
 export function windowsInstallerUrl(version: string, arch: string) {
-  return `${RELEASES_BASE}/Dinosaur-${version}-${arch}-Setup.exe`
+  return `${RELEASES_BASE}/download/v${version}/Dinosaur-${version}-${arch}-Setup.exe`
 }
 
 // The Sparkle appcast has no CORS headers, so resolve it on the server.
 const fetchLatestRelease = createServerFn({ method: 'GET' }).handler(
   async (): Promise<LatestRelease | null> => {
     try {
-      const res = await fetch(`${RELEASES_BASE}/appcast.xml`, {
+      const res = await fetch(`${RELEASES_BASE}/latest/download/appcast.xml`, {
         signal: AbortSignal.timeout(2500),
       })
       if (!res.ok) return null
@@ -44,7 +43,7 @@ const fetchLatestRelease = createServerFn({ method: 'GET' }).handler(
       const pubDate = xml.match(/<pubDate>([^<]+)<\/pubDate>/)?.[1] ?? null
       return {
         version,
-        url: `${RELEASES_BASE}/Dinosaur-${version}.dmg`,
+        url: `${RELEASES_BASE}/download/v${version}/Dinosaur-${version}.dmg`,
         pubDate,
       }
     } catch {

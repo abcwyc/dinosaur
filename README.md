@@ -6,12 +6,12 @@ and keeps projects, sessions, transcripts on your machine.
 
 ## Install
 
-On macOS, [download the signed `.dmg`](https://waku.sh). It updates itself.
+On macOS, [download the signed `.dmg`](https://github.com/abcwyc/dinosaur/releases/latest). It updates itself.
 
 On Linux:
 
 ```sh
-curl -fsSL https://waku.sh/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/abcwyc/dinosaur/main/website/public/install.sh | sh
 ```
 
 The script installs into `~/.local` without root. See
@@ -19,7 +19,7 @@ The script installs into `~/.local` without root. See
 uninstalling.
 
 On Windows, run `Dinosaur-<version>-<arch>-Setup.exe` from the
-[latest release](https://github.com/egoist/waku/releases/latest). It installs
+[latest release](https://github.com/abcwyc/dinosaur/releases/latest). It installs
 per-user and updates itself. A portable `.zip` is published alongside it. See
 [docs/windows.md](docs/windows.md) for requirements and what is not available
 there yet.

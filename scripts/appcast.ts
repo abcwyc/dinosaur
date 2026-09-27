@@ -3,10 +3,10 @@
 // Sign update archives and (re)generate the Sparkle appcast for a directory.
 //
 // Usage:
-//   bun scripts/appcast.ts <updates-dir>
+//   bun scripts/appcast.ts <updates-dir> <version>
 //
-// <updates-dir> holds the packaged archives (e.g. Dinosaur-0.2.0.zip) plus any
-// older archives so Sparkle can build binary deltas. appcast.xml is written
+// <updates-dir> holds the packaged archive (e.g. Dinosaur-0.2.0.zip) that the
+// v<version> GitHub release serves. appcast.xml is written
 // into that directory. The private EdDSA key is read from SPARKLE_PRIVATE_KEY
 // when set, otherwise from the login keychain (see RELEASING.md).
 //
@@ -19,7 +19,14 @@ import { join, resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dir, "..");
 
-export const defaultDownloadUrlPrefix = "https://releases.waku.sh/";
+/** The GitHub repository whose releases host every download and update feed. */
+export const releaseRepository = "abcwyc/dinosaur";
+
+const releasesUrl = `https://github.com/${releaseRepository}/releases`;
+
+/** Where one version's assets are served: its `v<version>` GitHub release. */
+export const downloadUrlPrefixFor = (version: string) =>
+  `${releasesUrl}/download/v${version}/`;
 
 /** Locate Sparkle's `generate_appcast`: SPARKLE_BIN first, then the pinned
  *  distribution scripts/bundle.sh caches under .waku-cache, then PATH. */
@@ -104,12 +111,12 @@ export async function generateAppcast(
 }
 
 if (import.meta.main) {
-  const updatesDir = process.argv[2];
-  if (!updatesDir) {
-    console.error("usage: bun scripts/appcast.ts <updates-dir>");
+  const [updatesDir, version] = process.argv.slice(2);
+  if (!updatesDir || !version) {
+    console.error("usage: bun scripts/appcast.ts <updates-dir> <version>");
     process.exit(1);
   }
   const prefix =
-    process.env.WAKU_DOWNLOAD_URL_PREFIX ?? defaultDownloadUrlPrefix;
+    process.env.WAKU_DOWNLOAD_URL_PREFIX ?? downloadUrlPrefixFor(version);
   await generateAppcast(updatesDir, prefix);
 }

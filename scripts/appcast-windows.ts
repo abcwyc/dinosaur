@@ -22,7 +22,7 @@ import { createPrivateKey, sign } from "node:crypto";
 import { readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { defaultDownloadUrlPrefix } from "./appcast.ts";
+import { downloadUrlPrefixFor } from "./appcast.ts";
 
 const projectRoot = resolve(import.meta.dir, "..");
 
@@ -226,7 +226,7 @@ if (import.meta.main) {
   await generateWindowsAppcasts(
     assetsDir,
     version,
-    process.env.WAKU_DOWNLOAD_URL_PREFIX ?? defaultDownloadUrlPrefix,
+    process.env.WAKU_DOWNLOAD_URL_PREFIX ?? downloadUrlPrefixFor(version),
     new Date().toUTCString(),
   );
 }
